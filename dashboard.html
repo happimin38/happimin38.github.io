@@ -544,7 +544,7 @@
     <section class="panel">
       <div class="panel-header">
         <div class="panel-title">자산 항목</div>
-        <div class="panel-sub">주식·코인 그룹은 "투자"로 두면 종목별 수량과 손익이 계산돼요</div>
+        <div class="panel-sub">"투자" 그룹은 수량 × 현재가로 평가금액과 손익을 계산해요 · 계좌 단위로 볼 땐 수량 1, 평균단가에 원금, 현재가에 평가액</div>
       </div>
       <div class="groups-list" id="groupsList"></div>
       <button class="btn-add-group" id="addGroup" type="button">+ 그룹 추가</button>
@@ -597,7 +597,18 @@
     const STORAGE_KEY = "salaryAppData_v1";
     const PALETTE = ["#22c55e", "#38bdf8", "#a78bfa", "#f97316", "#f472b6", "#facc15", "#2dd4bf", "#fb7185", "#60a5fa", "#94a3b8"];
     // Groups with these names track individual holdings rather than one lump sum.
-    const HOLDING_NAMES = ["주식", "비트코인", "코인", "가상화폐", "etf", "펀드", "암호화폐"];
+    const HOLDING_NAMES = [
+      "주식", "isa", "퇴직연금", "연금저축", "irp", "비트코인",
+      "코인", "가상화폐", "암호화폐", "etf", "펀드",
+    ];
+
+    function normalizeName(name) {
+      return (name || "").trim().toLowerCase().replace(/\s+/g, "");
+    }
+
+    function looksLikeHolding(name) {
+      return HOLDING_NAMES.includes(normalizeName(name));
+    }
 
     function loadData() {
       try {
@@ -620,6 +631,19 @@
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     }
 
+    // A plain amount becomes one unit priced at that amount, so the row keeps
+    // the value it had while the quantity and prices wait to be filled in.
+    function toHoldingItem(it) {
+      const amount = Number(it.amount) || 0;
+      return {
+        id: it.id || genId(),
+        name: it.name || "",
+        qty: amount ? 1 : 0,
+        avgPrice: amount,
+        curPrice: amount,
+      };
+    }
+
     let data = loadData();
 
     // Migrate older shapes so nothing already entered is lost:
@@ -637,26 +661,39 @@
           { id: genId(), name: "현금", items: [{ id: genId(), name: "현금", amount: data.startingAssets }] },
         ];
       } else {
+        const emptyHolding = () => [{ id: genId(), name: "", qty: 0, avgPrice: 0, curPrice: 0 }];
         data.assetGroups = [
           { id: genId(), name: "저축", type: "simple", items: [{ id: genId(), name: "", amount: 0 }] },
-          { id: genId(), name: "주식", type: "holding", items: [{ id: genId(), name: "", qty: 0, avgPrice: 0, curPrice: 0 }] },
-          { id: genId(), name: "연금", type: "simple", items: [{ id: genId(), name: "", amount: 0 }] },
+          { id: genId(), name: "주식", type: "holding", items: emptyHolding() },
+          { id: genId(), name: "ISA", type: "holding", items: emptyHolding() },
+          { id: genId(), name: "퇴직연금", type: "holding", items: emptyHolding() },
+          { id: genId(), name: "비트코인", type: "holding", items: emptyHolding() },
         ];
       }
     }
 
-    // Groups predating the investment mode default to "simple". A stock-like
-    // group with nothing entered yet is switched over, since converting real
-    // amounts would invent share counts nobody typed.
+    // Groups predating the investment mode carry no type yet.
     data.assetGroups.forEach((g) => {
       if (g.type === "simple" || g.type === "holding") return;
-      const looksLikeHolding = HOLDING_NAMES.includes((g.name || "").trim().toLowerCase());
-      const isEmpty = g.items.every((it) => !(Number(it.amount) || 0));
-      g.type = looksLikeHolding && isEmpty ? "holding" : "simple";
+      g.type = looksLikeHolding(g.name) ? "holding" : "simple";
       if (g.type === "holding") {
-        g.items = g.items.map((it) => ({ id: it.id, name: it.name || "", qty: 0, avgPrice: 0, curPrice: 0 }));
+        g.items = g.items.map((it) => toHoldingItem(it));
       }
     });
+
+    // One-time pass so investment-style groups saved before this change switch
+    // over too. An amount already entered becomes a single unit priced at that
+    // amount, which keeps the group's total exactly as it was; the quantity and
+    // prices are then the user's to correct. Recorded so a group deliberately
+    // set back to "금액만" is not flipped again on the next visit.
+    if (!data.holdingModeUpgrade) {
+      data.assetGroups.forEach((g) => {
+        if (g.type === "holding" || !looksLikeHolding(g.name)) return;
+        g.type = "holding";
+        g.items = g.items.map((it) => toHoldingItem(it));
+      });
+      data.holdingModeUpgrade = true;
+    }
 
     if (typeof data.assetSnapshots !== "object" || data.assetSnapshots === null) {
       data.assetSnapshots = {};
@@ -924,7 +961,7 @@
                 } else {
                   plHtml = '<span class="bd-item-pl"></span>';
                 }
-                const qtyLabel = isHolding && Number(it.qty) ? ` · ${formatQty(it.qty)}주` : "";
+                const qtyLabel = isHolding && Number(it.qty) ? ` · 수량 ${formatQty(it.qty)}` : "";
                 return `
                   <div class="bd-item">
                     <span class="bd-item-name">${escapeHtml(it.name || "이름 없음")}${qtyLabel}</span>
@@ -1231,10 +1268,7 @@
       if (nextType === group.type) return;
 
       if (nextType === "holding") {
-        group.items = group.items.map((it) => {
-          const amount = Number(it.amount) || 0;
-          return { id: it.id, name: it.name || "", qty: amount ? 1 : 0, avgPrice: amount, curPrice: amount };
-        });
+        group.items = group.items.map((it) => toHoldingItem(it));
       } else {
         group.items = group.items.map((it) => ({
           id: it.id,
