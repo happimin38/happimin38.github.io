@@ -161,6 +161,101 @@
       text-underline-offset: 3px;
     }
 
+    /* Calendar */
+    .calendar-panel { margin-bottom: 20px; }
+
+    .calendar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .btn-clear {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-main);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .btn-clear:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-clear[hidden] { display: none; }
+
+    .weekday-row,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .weekday-row {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .weekday-row .sun { color: #fca5a5; }
+    .weekday-row .sat { color: #93c5fd; }
+
+    .day {
+      min-height: 62px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(2, 6, 23, 0.55);
+      padding: 6px 6px 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-start;
+      font-family: inherit;
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.12s ease, background 0.12s ease;
+    }
+
+    .day:hover { border-color: var(--accent); }
+
+    .day.blank {
+      background: none;
+      border-color: transparent;
+      cursor: default;
+      min-height: 0;
+    }
+
+    .day.blank:hover { border-color: transparent; }
+
+    .day.empty { cursor: default; }
+    .day.empty:hover { border-color: rgba(148, 163, 184, 0.18); }
+
+    .day.today { border-color: rgba(56, 189, 248, 0.7); }
+
+    .day.selected {
+      border-color: var(--accent);
+      background: rgba(249, 115, 22, 0.14);
+    }
+
+    .day-num { font-size: 12px; color: var(--text-muted); }
+    .day.sun .day-num { color: #fca5a5; }
+    .day.sat .day-num { color: #93c5fd; }
+
+    .day-amount {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.3;
+      word-break: keep-all;
+    }
+
+    .day-count { font-size: 10px; color: var(--text-muted); }
+
     /* Layout */
     .main-grid {
       display: grid;
@@ -412,6 +507,18 @@
       </div>
     </div>
 
+    <section class="panel calendar-panel">
+      <div class="calendar-head">
+        <div class="panel-title" style="margin-bottom:0">날짜별 지출</div>
+        <button class="btn-clear" id="clearDay" type="button" hidden>전체 보기</button>
+      </div>
+      <div class="weekday-row">
+        <span class="sun">일</span><span>월</span><span>화</span><span>수</span>
+        <span>목</span><span>금</span><span class="sat">토</span>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </section>
+
     <div class="main-grid">
       <section class="panel">
         <div class="panel-title">지출 추가</div>
@@ -490,6 +597,9 @@
 
     let currentDate = new Date();
     currentDate.setDate(1);
+
+    // The calendar day being inspected; null shows the whole month.
+    let selectedDay = null;
 
     function monthKey(d) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -606,9 +716,79 @@
       }
     }
 
+    // Totals per date, for the calendar and for filtering the list.
+    function spendingByDay(key) {
+      const byDay = {};
+      expensesOf(key).forEach((e) => {
+        const day = e.date || `${key}-01`;
+        (byDay[day] = byDay[day] || []).push(e);
+      });
+      return byDay;
+    }
+
+    function shortWon(n) {
+      const v = Math.round(n);
+      if (v >= 100000000) return (v / 100000000).toFixed(1).replace(/\.0$/, "") + "억";
+      if (v >= 10000) return (v / 10000).toFixed(v >= 100000 ? 0 : 1).replace(/\.0$/, "") + "만";
+      return v.toLocaleString("ko-KR");
+    }
+
+    function renderCalendar(key) {
+      const grid = document.getElementById("calendarGrid");
+      const [year, monthNo] = key.split("-").map(Number);
+      const firstWeekday = new Date(year, monthNo - 1, 1).getDay();
+      const daysInMonth = new Date(year, monthNo, 0).getDate();
+      const byDay = spendingByDay(key);
+      const todayKey = (() => {
+        const t = new Date();
+        return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+      })();
+
+      const cells = [];
+      for (let i = 0; i < firstWeekday; i++) {
+        cells.push('<div class="day blank"></div>');
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = `${key}-${String(d).padStart(2, "0")}`;
+        const items = byDay[date] || [];
+        const total = items.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+        const weekday = (firstWeekday + d - 1) % 7;
+        const classes = [
+          "day",
+          items.length ? "" : "empty",
+          weekday === 0 ? "sun" : weekday === 6 ? "sat" : "",
+          date === todayKey ? "today" : "",
+          date === selectedDay ? "selected" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        cells.push(`
+          <button type="button" class="${classes}" data-date="${date}"
+            aria-label="${monthNo}월 ${d}일${total ? " " + formatWon(total) : " 지출 없음"}">
+            <span class="day-num">${d}</span>
+            ${total ? `<span class="day-amount">${shortWon(total)}</span>` : ""}
+            ${items.length > 1 ? `<span class="day-count">${items.length}건</span>` : ""}
+          </button>
+        `);
+      }
+      grid.innerHTML = cells.join("");
+
+      const clearBtn = document.getElementById("clearDay");
+      clearBtn.hidden = !selectedDay;
+    }
+
     function renderList(key) {
       const listEl = document.getElementById("expenseList");
-      const expenses = expensesOf(key);
+      let expenses = expensesOf(key);
+
+      // A picked calendar day narrows the list to that day.
+      if (selectedDay) {
+        expenses = expenses.filter((e) => (e.date || `${key}-01`) === selectedDay);
+        if (expenses.length === 0) {
+          listEl.innerHTML = `<div class="empty-state">${selectedDay}에는 지출 기록이 없어요.</div>`;
+          return;
+        }
+      }
 
       if (expenses.length === 0) {
         listEl.innerHTML = '<div class="empty-state">아직 등록된 지출이 없어요.</div>';
@@ -711,6 +891,7 @@
         `${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월`;
 
       renderSummary(key);
+      renderCalendar(key);
       renderList(key);
       renderBreakdown(key);
       prefillDate(key);
@@ -721,6 +902,11 @@
     function prefillDate(key) {
       const input = document.getElementById("expenseDate");
       if (input.value) return;
+      // While a day is open, keep adding to that day.
+      if (selectedDay) {
+        input.value = selectedDay;
+        return;
+      }
       const now = new Date();
       input.value = monthKey(now) === key
         ? `${key}-${String(now.getDate()).padStart(2, "0")}`
@@ -729,11 +915,29 @@
 
     document.getElementById("prevMonth").addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
+      selectedDay = null;
       render();
     });
 
     document.getElementById("nextMonth").addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
+      selectedDay = null;
+      render();
+    });
+
+    document.getElementById("calendarGrid").addEventListener("click", (e) => {
+      const cell = e.target.closest(".day[data-date]");
+      if (!cell) return;
+      const date = cell.dataset.date;
+      // Clicking the open day closes it again.
+      selectedDay = selectedDay === date ? null : date;
+      // Adding while a day is open files the entry on that day.
+      if (selectedDay) document.getElementById("expenseDate").value = selectedDay;
+      render();
+    });
+
+    document.getElementById("clearDay").addEventListener("click", () => {
+      selectedDay = null;
       render();
     });
 

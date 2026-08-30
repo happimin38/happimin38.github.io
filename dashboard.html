@@ -640,7 +640,7 @@
     <section class="panel">
       <div class="panel-header">
         <div class="panel-title">자산 항목</div>
-        <div class="panel-sub">"투자" 그룹은 수량 × 현재가로 평가금액과 손익을 계산해요 · 계좌 단위로 볼 땐 수량 1, 평균단가에 원금, 현재가에 평가액</div>
+        <div class="panel-sub">"종목별"로 두면 종목마다 수량 × 현재가로 평가금액과 손익을 계산해요 · 계좌 하나로 볼 땐 수량 1, 평균단가에 원금, 현재가에 평가액</div>
       </div>
       <div class="groups-list" id="groupsList"></div>
       <button class="btn-add-group" id="addGroup" type="button">+ 그룹 추가</button>
@@ -1085,7 +1085,7 @@
                 <input type="text" class="group-name" value="${escapeHtml(g.name)}" maxlength="20" placeholder="그룹 이름" />
                 <select class="group-type" aria-label="관리 방식">
                   <option value="simple"${isHolding ? "" : " selected"}>금액만</option>
-                  <option value="holding"${isHolding ? " selected" : ""}>투자</option>
+                  <option value="holding"${isHolding ? " selected" : ""}>종목별</option>
                 </select>
                 <span class="group-totals">
                   <span class="group-total" data-group-total></span>
@@ -1511,6 +1511,28 @@
 
       if (e.target.classList.contains("group-name")) {
         group.name = e.target.value;
+
+        // Naming an empty group after an investment gives it holding fields
+        // without a trip to the mode dropdown. Only while it is still empty,
+        // so a group with figures in it is never reshaped underfoot.
+        if (group.type !== "holding" && looksLikeHolding(group.name) && groupTotal(group) === 0) {
+          group.type = "holding";
+          group.items = group.items.map((it) => toHoldingItem(it));
+          recordSnapshot();
+          saveData(data);
+          const caret = e.target.selectionStart;
+          renderAll();
+          const again = groupsListEl.querySelector(`[data-group-id="${group.id}"] .group-name`);
+          if (again) {
+            again.focus();
+            try {
+              again.setSelectionRange(caret, caret);
+            } catch (err) {
+              // Selection is a nicety; the value is already correct.
+            }
+          }
+          return;
+        }
       } else {
         const row = e.target.closest(".item-row");
         if (!row) return;
