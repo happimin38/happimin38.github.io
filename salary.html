@@ -5,6 +5,13 @@
   <title>월급 관리 · 지출·저축 대시보드</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="월급을 기록하고 지출과 저축을 관리하는 개인용 대시보드" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#050816" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="머니 노트" />
   <style>
     :root {
       --bg-color: #050816;
@@ -491,7 +498,7 @@
       <div class="nav-links">
         <a class="back-link" href="ledger.html">가계부</a>
         <a class="back-link" href="dashboard.html">자산 대시보드</a>
-        <a class="back-link" href="index.html">← 포트폴리오로</a>
+        <a class="back-link" href="index.html">← 홈</a>
       </div>
     </header>
 
@@ -797,6 +804,13 @@
 
     Money.attach(document);
     render();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+
   </script>
 </body>
 </html>
