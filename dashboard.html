@@ -214,6 +214,21 @@
       color: var(--group-color, var(--text-main));
     }
 
+    .group-paid {
+      display: block;
+      font-size: 11px;
+      color: #5eead4;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .group-paid[hidden] { display: none; }
+
+    .sub-link {
+      color: var(--accent-3);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     .group-pl { font-size: 11px; font-variant-numeric: tabular-nums; display: block; }
     .group-pl.up { color: var(--accent-2); }
     .group-pl.down { color: var(--danger); }
@@ -598,6 +613,11 @@
         <div class="summary-sub" id="statPLSub"></div>
       </div>
       <div class="summary-card">
+        <div class="summary-label"><span class="dot" style="background:#2dd4bf"></span>이번 달 저축 납입</div>
+        <div class="summary-value" id="statPaid">0원</div>
+        <div class="summary-sub" id="statPaidSub"></div>
+      </div>
+      <div class="summary-card">
         <div class="summary-label"><span class="dot" style="background:#facc15"></span>최고 기록</div>
         <div class="summary-value" id="statPeak">0원</div>
       </div>
@@ -930,6 +950,35 @@
       return group.items.reduce((sum, it) => sum + itemValue(group, it), 0);
     }
 
+    /* ---------- Savings paid in from the salary page ---------- */
+
+    function monthSavings(monthKey) {
+      const month = (data.months || {})[monthKey];
+      return month && Array.isArray(month.savings) ? month.savings : [];
+    }
+
+    function contributionsFor(monthKey) {
+      const byGroup = {};
+      let total = 0;
+      monthSavings(monthKey).forEach((s) => {
+        const amount = Number(s.amount) || 0;
+        if (!amount) return;
+        const key = s.groupId || `name:${s.groupName || "기타"}`;
+        byGroup[key] = (byGroup[key] || 0) + amount;
+        total += amount;
+      });
+      return { byGroup, total };
+    }
+
+    function contributionForGroup(monthKey, group) {
+      const { byGroup } = contributionsFor(monthKey);
+      return (byGroup[group.id] || 0) + (byGroup[`name:${group.name || "기타"}`] || 0);
+    }
+
+    function savingsMonths() {
+      return Object.keys(data.months || {}).filter((k) => monthSavings(k).length > 0);
+    }
+
     function groupCost(group) {
       return group.items.reduce((sum, it) => sum + itemCost(group, it), 0);
     }
@@ -1031,6 +1080,7 @@
                 <span class="group-totals">
                   <span class="group-total" data-group-total></span>
                   ${isHolding ? '<span class="group-pl" data-group-pl></span>' : ""}
+                  <span class="group-paid" data-group-paid hidden></span>
                 </span>
                 <button class="icon-btn del-group" type="button" aria-label="그룹 삭제">✕</button>
               </div>
@@ -1067,6 +1117,13 @@
 
         const totalEl = card.querySelector("[data-group-total]");
         if (totalEl) totalEl.textContent = formatWon(groupTotal(group));
+
+        const paidEl = card.querySelector("[data-group-paid]");
+        if (paidEl) {
+          const paid = contributionForGroup(currentMonthKey(), group);
+          paidEl.textContent = paid > 0 ? `이번 달 납입 ${formatSigned(paid)}` : "";
+          paidEl.hidden = paid <= 0;
+        }
 
         const plEl = card.querySelector("[data-group-pl]");
         if (plEl) {
@@ -1197,6 +1254,21 @@
 
       const peak = timeline.length ? Math.max(...timeline.map((t) => t.value)) : 0;
       document.getElementById("statPeak").textContent = formatWon(peak);
+
+      // Paid in this month, recorded on the salary page.
+      const paid = contributionsFor(currentMonthKey()).total;
+      const statPaid = document.getElementById("statPaid");
+      const statPaidSub = document.getElementById("statPaidSub");
+      statPaid.textContent = formatWon(paid);
+      statPaid.className = "summary-value" + (paid > 0 ? " up" : "");
+      if (paid > 0) {
+        const count = monthSavings(currentMonthKey()).length;
+        statPaidSub.textContent = `${count}건 · 월급 관리에서 기록`;
+        statPaidSub.className = "summary-sub flat";
+      } else {
+        statPaidSub.innerHTML = '<a class="sub-link" href="salary.html">월급 관리에서 기록하기</a>';
+        statPaidSub.className = "summary-sub flat";
+      }
     }
 
     function renderTable(timeline) {
@@ -1207,17 +1279,22 @@
         .map((g) => g.name || "기타")
         .filter((n, i, arr) => arr.indexOf(n) === i);
 
+      // The paid-in column only earns its place once savings are being recorded.
+      const showPaid = savingsMonths().length > 0;
+
       head.innerHTML = `
         <tr>
           <th>월</th>
           ${groupNames.map((n) => `<th>${escapeHtml(n)}</th>`).join("")}
           <th>총자산</th>
           <th>전월 대비</th>
+          ${showPaid ? "<th>저축 납입</th><th>시장 변동</th>" : ""}
         </tr>
       `;
 
       if (timeline.length === 0) {
-        body.innerHTML = `<tr><td colspan="${groupNames.length + 3}" style="text-align:center; color: var(--text-muted);">데이터가 없어요.</td></tr>`;
+        const cols = groupNames.length + 3 + (showPaid ? 2 : 0);
+        body.innerHTML = `<tr><td colspan="${cols}" style="text-align:center; color: var(--text-muted);">데이터가 없어요.</td></tr>`;
         return;
       }
 
@@ -1237,12 +1314,26 @@
               return `<td>${v === undefined ? '<span style="color:var(--text-muted)">-</span>' : formatWon(v)}</td>`;
             })
             .join("");
+          let paidCells = "";
+          if (showPaid) {
+            const paid = contributionsFor(t.key).total;
+            const paidHtml = paid > 0 ? formatWon(paid) : '<span style="color:var(--text-muted)">-</span>';
+            // Whatever the total moved beyond what was paid in is the market's doing.
+            let marketHtml = '<span style="color:var(--text-muted)">-</span>';
+            if (prev) {
+              const market = t.value - prev.value - paid;
+              const cls = market > 0 ? "positive" : market < 0 ? "negative" : "";
+              marketHtml = `<span class="${cls}">${formatSigned(market)}</span>`;
+            }
+            paidCells = `<td>${paidHtml}</td><td>${marketHtml}</td>`;
+          }
           return `
             <tr>
               <td>${monthLabel(t.key)}</td>
               ${groupCells}
               <td class="total-cell">${formatWon(t.value)}</td>
               <td>${diffHtml}</td>
+              ${paidCells}
             </tr>
           `;
         })

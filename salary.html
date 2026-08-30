@@ -266,6 +266,31 @@
       margin-bottom: 14px;
     }
 
+    .panel-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: -8px 0 12px;
+    }
+
+    .panel-note a {
+      color: var(--accent-2);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .summary-value.positive { color: var(--accent-2); }
+    .summary-value.negative { color: var(--danger); }
+
+    .saving-target {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #bbf7d0;
+      white-space: nowrap;
+    }
+
     /* Income input */
     .income-row {
       display: flex;
@@ -496,8 +521,12 @@
         <div class="summary-value" id="sumExpense">0원</div>
       </div>
       <div class="summary-card">
-        <div class="summary-label"><span class="summary-dot" style="background:#22c55e"></span>이번 달 저축액</div>
+        <div class="summary-label"><span class="summary-dot" style="background:#22c55e"></span>저축 납입</div>
         <div class="summary-value" id="sumSavings">0원</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label"><span class="summary-dot" style="background:#a78bfa"></span>남은 금액</div>
+        <div class="summary-value" id="sumLeft">0원</div>
       </div>
       <div class="summary-card">
         <div class="summary-label"><span class="summary-dot" style="background:#facc15"></span>저축률</div>
@@ -549,7 +578,23 @@
       </section>
 
       <section class="panel">
-        <div class="panel-title">카테고리별 지출</div>
+        <div class="panel-title">저축 · 투자 납입</div>
+        <p class="panel-note">
+          이번 달에 어디에 얼마를 넣었는지 기록하면
+          <a href="dashboard.html">자산 대시보드</a>의 해당 항목에 함께 표시돼요.
+        </p>
+        <form class="expense-form" id="savingForm">
+          <select id="savingTarget"></select>
+          <input type="number" id="savingAmount" placeholder="금액" min="0" step="10000" required />
+          <input type="date" id="savingDate" class="full" />
+          <input type="text" id="savingMemo" class="full" placeholder="메모 (선택)" maxlength="40" />
+          <button type="submit" class="btn-add">+ 저축 추가</button>
+        </form>
+
+        <div class="panel-title" style="margin-top: 18px;">저축 내역</div>
+        <ul class="expense-list" id="savingList"></ul>
+
+        <div class="panel-title" style="margin-top: 18px;">카테고리별 지출</div>
         <div class="cat-breakdown" id="catBreakdown">
           <div class="empty-state">아직 등록된 지출이 없어요.</div>
         </div>
@@ -601,13 +646,40 @@
 
     function ensureMonth(key) {
       if (!data.months[key]) {
-        data.months[key] = { income: 0, goal: 0, expenses: [] };
+        data.months[key] = { income: 0, goal: 0, expenses: [], savings: [] };
       }
+      // Months recorded before savings existed carry no list.
+      if (!Array.isArray(data.months[key].savings)) data.months[key].savings = [];
       return data.months[key];
     }
 
     function formatWon(n) {
       return Math.round(n).toLocaleString("ko-KR") + "원";
+    }
+
+    function genId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
+
+    // The dashboard's groups are the destinations savings can be paid into.
+    function assetGroups() {
+      return Array.isArray(data.assetGroups) ? data.assetGroups : [];
+    }
+
+    function renderSavingTargets() {
+      const select = document.getElementById("savingTarget");
+      const previous = select.value;
+      const groups = assetGroups();
+      select.innerHTML =
+        groups.map((g) => `<option value="${g.id}">${escapeHtml(g.name || "이름 없는 그룹")}</option>`).join("") +
+        '<option value="">기타 (자산 항목 없음)</option>';
+      if (previous && select.querySelector(`option[value="${previous}"]`)) select.value = previous;
+    }
+
+    function savingLabel(entry) {
+      const group = assetGroups().find((g) => g.id === entry.groupId);
+      // Fall back to the name recorded at entry time if the group is gone.
+      return (group && group.name) || entry.groupName || "기타";
     }
 
     function render() {
@@ -621,7 +693,8 @@
       document.getElementById("goalInput").value = month.goal || "";
 
       const totalExpense = month.expenses.reduce((sum, e) => sum + e.amount, 0);
-      const savings = month.income - totalExpense;
+      const savings = month.savings.reduce((sum, s) => sum + s.amount, 0);
+      const left = month.income - totalExpense - savings;
       const rate = month.income > 0 ? (savings / month.income) * 100 : 0;
 
       document.getElementById("sumIncome").textContent = formatWon(month.income);
@@ -629,7 +702,11 @@
 
       const savingsEl = document.getElementById("sumSavings");
       savingsEl.textContent = formatWon(savings);
-      savingsEl.className = "summary-value " + (savings >= 0 ? "positive" : "negative");
+      savingsEl.className = "summary-value positive";
+
+      const leftEl = document.getElementById("sumLeft");
+      leftEl.textContent = formatWon(left);
+      leftEl.className = "summary-value " + (left >= 0 ? "" : "negative");
 
       document.getElementById("sumRate").textContent = `${rate.toFixed(1)}%`;
 
@@ -672,6 +749,31 @@
             <button class="expense-del" data-id="${e.id}" aria-label="삭제">✕</button>
           `;
           listEl.appendChild(li);
+        });
+      }
+
+      // Savings list
+      renderSavingTargets();
+      const savingListEl = document.getElementById("savingList");
+      savingListEl.innerHTML = "";
+      const savingsSorted = [...month.savings].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      if (savingsSorted.length === 0) {
+        savingListEl.innerHTML =
+          '<div class="empty-state">이번 달 저축을 기록하면 자산 대시보드에도 반영돼요.</div>';
+      } else {
+        savingsSorted.forEach((s) => {
+          const li = document.createElement("li");
+          li.className = "expense-item";
+          li.innerHTML = `
+            <span class="saving-target">${escapeHtml(savingLabel(s))}</span>
+            <div class="expense-main">
+              <div class="expense-amount">${formatWon(s.amount)}</div>
+              ${s.memo ? `<div class="expense-memo">${escapeHtml(s.memo)}</div>` : ""}
+            </div>
+            <span class="expense-date">${s.date || ""}</span>
+            <button class="expense-del" data-id="${s.id}" aria-label="삭제">✕</button>
+          `;
+          savingListEl.appendChild(li);
         });
       }
 
@@ -768,6 +870,42 @@
       const key = monthKey(currentDate);
       const month = ensureMonth(key);
       month.expenses = month.expenses.filter((exp) => exp.id !== btn.dataset.id);
+      saveData(data);
+      render();
+    });
+
+    document.getElementById("savingForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const key = monthKey(currentDate);
+      const month = ensureMonth(key);
+      const groupId = document.getElementById("savingTarget").value;
+      const amount = Number(document.getElementById("savingAmount").value) || 0;
+      const date = document.getElementById("savingDate").value || key + "-01";
+      const memo = document.getElementById("savingMemo").value.trim();
+
+      if (amount <= 0) return;
+
+      const group = assetGroups().find((g) => g.id === groupId);
+      month.savings.push({
+        id: genId(),
+        groupId,
+        // Kept so the entry still reads correctly if the group is renamed or removed.
+        groupName: (group && group.name) || "기타",
+        amount,
+        date,
+        memo,
+      });
+      saveData(data);
+      e.target.reset();
+      render();
+    });
+
+    document.getElementById("savingList").addEventListener("click", (e) => {
+      const btn = e.target.closest(".expense-del");
+      if (!btn) return;
+      const key = monthKey(currentDate);
+      const month = ensureMonth(key);
+      month.savings = month.savings.filter((s) => s.id !== btn.dataset.id);
       saveData(data);
       render();
     });
