@@ -5,6 +5,13 @@
   <title>자산 대시보드 · 월급 관리</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="저축·연금은 금액으로, 주식·코인은 종목별 수량과 단가로 나눠 관리하는 자산 대시보드" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#050816" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="머니 노트" />
   <style>
     :root {
       --bg-color: #050816;
@@ -590,7 +597,7 @@
       <div class="nav-links">
         <a href="salary.html">월급 관리</a>
         <a href="ledger.html">가계부</a>
-        <a href="index.html">← 포트폴리오로</a>
+        <a href="index.html">← 홈</a>
       </div>
     </header>
 
@@ -1704,6 +1711,13 @@
     saveData(data);
     Money.attach(document);
     renderAll();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+
     fillBackupBox();
     announceRecovery();
   </script>
