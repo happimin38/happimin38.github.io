@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>자산 대시보드 · 월급 관리</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="월급 관리 앱에 기록된 수입과 지출을 바탕으로 지금까지의 자산 변화를 확인하는 대시보드" />
+  <meta name="description" content="저축, 주식, 비트코인 등 원하는 카테고리로 자산을 직접 입력하고 총자산과 변화 추이를 확인하는 대시보드" />
   <style>
     :root {
       --bg-color: #050816;
@@ -90,29 +90,6 @@
 
     .nav-links a:hover { border-color: var(--accent-3); color: var(--accent-3); }
 
-    /* Starting assets */
-    .setup-row {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .setup-row input {
-      width: 150px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      background: rgba(2, 6, 23, 0.8);
-      color: var(--text-main);
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-    }
-
     /* Summary tiles */
     .summary-grid {
       display: grid;
@@ -137,7 +114,7 @@
       gap: 6px;
     }
 
-    .summary-dot { width: 8px; height: 8px; border-radius: 999px; }
+    .summary-dot { width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; }
 
     .summary-value {
       font-size: 22px;
@@ -155,7 +132,15 @@
     .summary-sub.down { color: var(--danger); }
     .summary-sub.flat { color: var(--text-muted); }
 
-    /* Chart panel */
+    /* Panels */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
     .panel {
       border-radius: 18px;
       border: 1px solid var(--border-subtle);
@@ -163,6 +148,8 @@
       padding: 18px 18px 14px;
       margin-bottom: 20px;
     }
+
+    .main-grid .panel { margin-bottom: 0; }
 
     .panel-header {
       display: flex;
@@ -176,6 +163,129 @@
     .panel-title { font-size: 14px; font-weight: 600; }
     .panel-sub { font-size: 11px; color: var(--text-muted); }
 
+    /* Asset items */
+    .asset-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .asset-item-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 130px 28px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .asset-item-row input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(2, 6, 23, 0.8);
+      color: var(--text-main);
+      font-size: 13px;
+    }
+
+    .asset-item-row .asset-amount {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .asset-del {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .asset-del:hover { color: var(--danger); border-color: var(--danger); }
+
+    .btn-add-item {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      background: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 14px;
+    }
+
+    .btn-add-item:hover { border-color: var(--accent-3); color: var(--accent-3); }
+
+    .asset-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 13px;
+    }
+
+    .asset-total-value {
+      font-size: 16px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Category breakdown */
+    .cat-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .cat-row { display: flex; flex-direction: column; gap: 4px; }
+
+    .cat-row-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      gap: 8px;
+    }
+
+    .cat-row-head .cat-name {
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cat-row-head .cat-amount {
+      color: var(--text-muted);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cat-bar-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.15);
+      overflow: hidden;
+    }
+
+    .cat-bar-fill { height: 100%; border-radius: 999px; }
+
+    .empty-state {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* Chart */
     .chart-wrap {
       position: relative;
       width: 100%;
@@ -194,12 +304,6 @@
       color: var(--text-muted);
       text-align: center;
       padding: 40px 12px;
-    }
-
-    .chart-empty a {
-      color: var(--accent-3);
-      text-decoration: underline;
-      text-underline-offset: 3px;
     }
 
     .tooltip {
@@ -250,7 +354,6 @@
     }
 
     tbody td:first-child { text-align: left; font-variant-numeric: normal; }
-
     tbody tr:last-child td { border-bottom: none; }
 
     td.positive { color: var(--accent-2); }
@@ -269,6 +372,7 @@
     @media (max-width: 768px) {
       .page { padding: 20px 16px 48px; }
       .summary-value { font-size: 18px; }
+      .main-grid { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
 </head>
@@ -279,7 +383,7 @@
         <div class="brand-logo">📈</div>
         <div class="brand-text">
           <div class="brand-name">자산 대시보드</div>
-          <div class="brand-role">지금까지의 자산 변화</div>
+          <div class="brand-role">카테고리별 자산과 변화 추이</div>
         </div>
       </div>
       <div class="nav-links">
@@ -288,30 +392,49 @@
       </div>
     </header>
 
-    <div class="setup-row">
-      시작 자산 (선택)
-      <input type="number" id="startingAssetsInput" placeholder="예: 5000000" min="0" step="10000" />
-    </div>
-
     <div class="summary-grid">
       <div class="summary-card">
         <div class="summary-label"><span class="summary-dot" style="background:#38bdf8"></span>현재 총자산</div>
         <div class="summary-value" id="statTotal">0원</div>
       </div>
       <div class="summary-card">
-        <div class="summary-label"><span class="summary-dot" style="background:#22c55e"></span>누적 저축액</div>
-        <div class="summary-value" id="statSaved">0원</div>
-        <div class="summary-sub" id="statSavedSub"></div>
+        <div class="summary-label"><span class="summary-dot" style="background:#22c55e"></span>지난 기록 대비</div>
+        <div class="summary-value" id="statChange">0원</div>
+        <div class="summary-sub" id="statChangeSub"></div>
       </div>
       <div class="summary-card">
-        <div class="summary-label"><span class="summary-dot" style="background:#facc15"></span>평균 월 저축액</div>
-        <div class="summary-value" id="statAvg">0원</div>
+        <div class="summary-label"><span class="summary-dot" style="background:#facc15"></span>최고 기록</div>
+        <div class="summary-value" id="statPeak">0원</div>
       </div>
       <div class="summary-card">
-        <div class="summary-label"><span class="summary-dot" style="background:#f97316"></span>이번 달 순저축</div>
-        <div class="summary-value" id="statThisMonth">0원</div>
-        <div class="summary-sub" id="statThisMonthSub"></div>
+        <div class="summary-label"><span class="summary-dot" style="background:#f97316"></span>가장 큰 비중</div>
+        <div class="summary-value" id="statTop">-</div>
+        <div class="summary-sub" id="statTopSub"></div>
       </div>
+    </div>
+
+    <div class="main-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">자산 항목</div>
+          <div class="panel-sub">원하는 이름으로 추가하세요</div>
+        </div>
+        <div class="asset-items-list" id="assetItemsList"></div>
+        <button class="btn-add-item" id="addAssetItem" type="button">+ 항목 추가</button>
+        <div class="asset-total-row">
+          <span>합계</span>
+          <span class="asset-total-value" id="assetItemsTotal">0원</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">카테고리별 비중</div>
+        </div>
+        <div class="cat-breakdown" id="catBreakdown">
+          <div class="empty-state">항목을 추가하면 비중이 표시돼요.</div>
+        </div>
+      </section>
     </div>
 
     <section class="panel">
@@ -320,42 +443,39 @@
         <div class="panel-sub" id="chartRange"></div>
       </div>
       <div class="chart-wrap" id="chartWrap">
-        <div class="chart-empty" id="chartEmpty">
-          아직 기록된 데이터가 없어요. <a href="salary.html">월급 관리 페이지</a>에서 월급과 지출을 먼저 입력해 주세요.
-        </div>
+        <div class="chart-empty">자산 항목에 금액을 입력하면 추이가 기록되기 시작해요.</div>
       </div>
     </section>
 
     <section class="panel">
       <div class="panel-header">
-        <div class="panel-title">월별 자산 내역</div>
-        <div class="panel-sub">최근 순</div>
+        <div class="panel-title">월별 자산 기록</div>
+        <div class="panel-sub">최근 순 · 한 달에 한 번, 마지막 입력값이 기록돼요</div>
       </div>
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
               <th>월</th>
-              <th>수입</th>
-              <th>지출</th>
-              <th>순저축</th>
-              <th>누적 자산</th>
+              <th>총자산</th>
+              <th>전월 대비</th>
             </tr>
           </thead>
           <tbody id="assetTableBody">
-            <tr><td colspan="5" style="text-align:center; color: var(--text-muted);">데이터가 없어요.</td></tr>
+            <tr><td colspan="3" style="text-align:center; color: var(--text-muted);">데이터가 없어요.</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
     <footer>
-      데이터는 이 브라우저에만 저장됩니다 (localStorage). 월급 관리 페이지와 같은 저장소를 사용해요.
+      데이터는 이 브라우저에만 저장됩니다 (localStorage). 다른 기기에서는 보이지 않아요.
     </footer>
   </div>
 
   <script>
     const STORAGE_KEY = "salaryAppData_v1";
+    const PALETTE = ["#22c55e", "#38bdf8", "#f97316", "#a78bfa", "#f472b6", "#facc15", "#fb7185", "#94a3b8", "#34d399", "#60a5fa"];
 
     function loadData() {
       try {
@@ -374,8 +494,29 @@
       }
     }
 
+    function genId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
+
     let data = loadData();
-    if (typeof data.startingAssets !== "number") data.startingAssets = 0;
+
+    // Migrate: fold a previously-set single "starting assets" value into an item
+    // so nobody loses a number they already entered.
+    if (!Array.isArray(data.assetItems)) {
+      if (typeof data.startingAssets === "number" && data.startingAssets > 0) {
+        data.assetItems = [{ id: genId(), name: "현금", amount: data.startingAssets }];
+      } else {
+        data.assetItems = [
+          { id: genId(), name: "저축", amount: 0 },
+          { id: genId(), name: "주식", amount: 0 },
+          { id: genId(), name: "비트코인", amount: 0 },
+          { id: genId(), name: "현금", amount: 0 },
+        ];
+      }
+    }
+    if (typeof data.assetSnapshots !== "object" || data.assetSnapshots === null) {
+      data.assetSnapshots = {};
+    }
 
     function formatWon(n) {
       return Math.round(n).toLocaleString("ko-KR") + "원";
@@ -393,70 +534,153 @@
       return `${y}.${m}`;
     }
 
-    function buildTimeline() {
-      const keys = Object.keys(data.months).sort();
-      let running = data.startingAssets || 0;
-      return keys.map((key) => {
-        const month = data.months[key];
-        const expense = (month.expenses || []).reduce((sum, e) => sum + e.amount, 0);
-        const income = month.income || 0;
-        const net = income - expense;
-        running += net;
-        return { key, income, expense, net, cumulative: running };
-      });
+    function currentMonthKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     }
 
-    function renderSummary(timeline) {
-      const total = timeline.length ? timeline[timeline.length - 1].cumulative : (data.startingAssets || 0);
+    function colorForName(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+      return PALETTE[hash % PALETTE.length];
+    }
+
+    function totalAssets() {
+      return data.assetItems.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+    }
+
+    function recordSnapshot() {
+      data.assetSnapshots[currentMonthKey()] = totalAssets();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function buildSnapshotTimeline() {
+      return Object.keys(data.assetSnapshots)
+        .sort()
+        .map((key) => ({ key, value: data.assetSnapshots[key] }));
+    }
+
+    function renderAssetItems() {
+      const listEl = document.getElementById("assetItemsList");
+      listEl.innerHTML = data.assetItems
+        .map(
+          (it) => `
+        <div class="asset-item-row" data-id="${it.id}">
+          <input type="text" class="asset-name" value="${escapeHtml(it.name)}" maxlength="20" placeholder="항목 이름" />
+          <input type="number" class="asset-amount" value="${it.amount || ""}" min="0" step="10000" placeholder="0" />
+          <button class="asset-del" type="button" aria-label="삭제">✕</button>
+        </div>
+      `
+        )
+        .join("");
+    }
+
+    function renderRest() {
+      const total = totalAssets();
+      document.getElementById("assetItemsTotal").textContent = formatWon(total);
       document.getElementById("statTotal").textContent = formatWon(total);
 
-      const totalSaved = timeline.reduce((sum, t) => sum + t.net, 0);
-      const savedEl = document.getElementById("statSaved");
-      savedEl.textContent = formatWon(totalSaved);
-      const savedSub = document.getElementById("statSavedSub");
-      savedSub.textContent = timeline.length ? `${timeline.length}개월 누적` : "";
-      savedSub.className = "summary-sub flat";
+      // Category breakdown
+      const breakdownEl = document.getElementById("catBreakdown");
+      const items = data.assetItems.filter((it) => (Number(it.amount) || 0) > 0);
+      if (items.length === 0) {
+        breakdownEl.innerHTML = '<div class="empty-state">항목을 추가하면 비중이 표시돼요.</div>';
+      } else {
+        const sorted = [...items].sort((a, b) => b.amount - a.amount);
+        const max = sorted[0].amount;
+        breakdownEl.innerHTML = sorted
+          .map((it) => {
+            const pct = total > 0 ? (it.amount / total) * 100 : 0;
+            const width = max > 0 ? (it.amount / max) * 100 : 0;
+            const color = colorForName(it.name || "기타");
+            return `
+              <div class="cat-row">
+                <div class="cat-row-head">
+                  <span class="cat-name"><span class="summary-dot" style="background:${color}"></span>${escapeHtml(it.name || "기타")}</span>
+                  <span class="cat-amount">${formatWon(it.amount)} (${pct.toFixed(1)}%)</span>
+                </div>
+                <div class="cat-bar-track">
+                  <div class="cat-bar-fill" style="width:${width}%; background:${color}"></div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
 
-      const avg = timeline.length ? totalSaved / timeline.length : 0;
-      document.getElementById("statAvg").textContent = formatWon(avg);
+      // Top category tile
+      const statTop = document.getElementById("statTop");
+      const statTopSub = document.getElementById("statTopSub");
+      if (items.length > 0) {
+        const top = [...items].sort((a, b) => b.amount - a.amount)[0];
+        const pct = total > 0 ? (top.amount / total) * 100 : 0;
+        statTop.textContent = top.name || "기타";
+        statTopSub.textContent = `전체의 ${pct.toFixed(1)}% · ${formatWon(top.amount)}`;
+      } else {
+        statTop.textContent = "-";
+        statTopSub.textContent = "";
+      }
 
-      const thisMonthEl = document.getElementById("statThisMonth");
-      const thisMonthSub = document.getElementById("statThisMonthSub");
-      if (timeline.length) {
+      // Timeline-based tiles, chart, table
+      const timeline = buildSnapshotTimeline();
+
+      const statChange = document.getElementById("statChange");
+      const statChangeSub = document.getElementById("statChangeSub");
+      if (timeline.length >= 2) {
         const last = timeline[timeline.length - 1];
-        thisMonthEl.textContent = formatWon(last.net);
-        if (last.net > 0) {
-          thisMonthSub.textContent = `▲ ${monthLabel(last.key)} 기준 저축 성공`;
-          thisMonthSub.className = "summary-sub up";
-        } else if (last.net < 0) {
-          thisMonthSub.textContent = `▼ ${monthLabel(last.key)} 기준 지출 초과`;
-          thisMonthSub.className = "summary-sub down";
+        const prev = timeline[timeline.length - 2];
+        const diff = last.value - prev.value;
+        const sign = diff > 0 ? "+" : "";
+        statChange.textContent = `${sign}${formatWon(diff)}`;
+        if (diff > 0) {
+          statChangeSub.textContent = `▲ ${monthLabel(prev.key)} → ${monthLabel(last.key)}`;
+          statChangeSub.className = "summary-sub up";
+        } else if (diff < 0) {
+          statChangeSub.textContent = `▼ ${monthLabel(prev.key)} → ${monthLabel(last.key)}`;
+          statChangeSub.className = "summary-sub down";
         } else {
-          thisMonthSub.textContent = `${monthLabel(last.key)} 기준 변동 없음`;
-          thisMonthSub.className = "summary-sub flat";
+          statChangeSub.textContent = "변동 없음";
+          statChangeSub.className = "summary-sub flat";
         }
       } else {
-        thisMonthEl.textContent = "0원";
-        thisMonthSub.textContent = "";
+        statChange.textContent = "-";
+        statChangeSub.textContent = timeline.length === 1 ? "첫 기록이에요" : "";
+        statChangeSub.className = "summary-sub flat";
       }
+
+      const statPeak = document.getElementById("statPeak");
+      const peak = timeline.length ? Math.max(...timeline.map((t) => t.value)) : 0;
+      statPeak.textContent = formatWon(peak);
+
+      renderTable(timeline);
+      renderChart(timeline);
     }
 
     function renderTable(timeline) {
       const body = document.getElementById("assetTableBody");
       if (timeline.length === 0) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">데이터가 없어요.</td></tr>';
+        body.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">데이터가 없어요.</td></tr>';
         return;
       }
-      const rows = [...timeline].reverse().map((t) => {
-        const netClass = t.net > 0 ? "positive" : t.net < 0 ? "negative" : "";
-        const netSign = t.net > 0 ? "+" : "";
+      const rows = [...timeline].reverse().map((t, i, arr) => {
+        const prev = arr[i + 1];
+        let diffHtml = '<span style="color:var(--text-muted)">-</span>';
+        if (prev) {
+          const diff = t.value - prev.value;
+          const cls = diff > 0 ? "positive" : diff < 0 ? "negative" : "";
+          const sign = diff > 0 ? "+" : "";
+          diffHtml = `<span class="${cls}">${sign}${formatWon(diff)}</span>`;
+        }
         return `
           <tr>
             <td>${monthLabel(t.key)}</td>
-            <td>${formatWon(t.income)}</td>
-            <td>${formatWon(t.expense)}</td>
-            <td class="${netClass}">${netSign}${formatWon(t.net)}</td>
-            <td class="cumulative">${formatWon(t.cumulative)}</td>
+            <td class="cumulative">${formatWon(t.value)}</td>
+            <td>${diffHtml}</td>
           </tr>
         `;
       });
@@ -468,26 +692,24 @@
       const rangeEl = document.getElementById("chartRange");
 
       if (timeline.length === 0) {
-        wrap.innerHTML = `
-          <div class="chart-empty">
-            아직 기록된 데이터가 없어요. <a href="salary.html">월급 관리 페이지</a>에서 월급과 지출을 먼저 입력해 주세요.
-          </div>
-        `;
+        wrap.innerHTML = '<div class="chart-empty">자산 항목에 금액을 입력하면 추이가 기록되기 시작해요.</div>';
         rangeEl.textContent = "";
         return;
       }
 
-      rangeEl.textContent = `${monthLabel(timeline[0].key)} ~ ${monthLabel(timeline[timeline.length - 1].key)}`;
+      rangeEl.textContent = timeline.length === 1
+        ? monthLabel(timeline[0].key)
+        : `${monthLabel(timeline[0].key)} ~ ${monthLabel(timeline[timeline.length - 1].key)}`;
 
       const W = 640, H = 240;
       const padL = 8, padR = 8, padT = 20, padB = 28;
       const innerW = W - padL - padR;
       const innerH = H - padT - padB;
 
-      const values = timeline.map((t) => t.cumulative);
-      let min = Math.min(...values, data.startingAssets || 0);
-      let max = Math.max(...values, data.startingAssets || 0);
-      if (min === max) { min -= 1; max += 1; }
+      const values = timeline.map((t) => t.value);
+      let min = Math.min(...values);
+      let max = Math.max(...values);
+      if (min === max) { min -= Math.max(Math.abs(min) * 0.1, 1); max += Math.max(Math.abs(max) * 0.1, 1); }
       const spread = max - min;
       min -= spread * 0.08;
       max += spread * 0.08;
@@ -496,7 +718,7 @@
       const xAt = (i) => n === 1 ? padL + innerW / 2 : padL + (i / (n - 1)) * innerW;
       const yAt = (v) => padT + innerH - ((v - min) / (max - min)) * innerH;
 
-      const points = timeline.map((t, i) => [xAt(i), yAt(t.cumulative)]);
+      const points = timeline.map((t, i) => [xAt(i), yAt(t.value)]);
 
       const linePath = points.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
       const areaPath = n === 1
@@ -510,7 +732,7 @@
         const y = yAt(v);
         gridSvg += `
           <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="rgba(148,163,184,0.14)" stroke-width="1" />
-          <text x="${padL}" y="${(y - 4).toFixed(1)}" font-size="9" fill="#64748b" font-family="var(--font-main)">${formatWonShort(v)}</text>
+          <text x="${padL}" y="${(y - 4).toFixed(1)}" font-size="9" fill="#64748b">${formatWonShort(v)}</text>
         `;
       }
 
@@ -524,7 +746,7 @@
       });
 
       const last = points[n - 1];
-      const lastVal = timeline[n - 1].cumulative;
+      const lastVal = timeline[n - 1].value;
 
       wrap.innerHTML = `
         <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="자산 증가 추이 차트">
@@ -562,6 +784,7 @@
         });
         const p = points[idx];
         const t = timeline[idx];
+        const prev = timeline[idx - 1];
         crosshair.setAttribute("x1", p[0]);
         crosshair.setAttribute("x2", p[0]);
         crosshair.setAttribute("visibility", "visible");
@@ -570,12 +793,17 @@
         const pctTop = (p[1] / H) * 100;
         tooltip.style.left = pctLeft + "%";
         tooltip.style.top = pctTop + "%";
-        const netSign = t.net > 0 ? "+" : "";
-        const netColor = t.net > 0 ? "#22c55e" : t.net < 0 ? "#f87171" : "#9ca3af";
+        let netHtml = "";
+        if (prev) {
+          const diff = t.value - prev.value;
+          const netColor = diff > 0 ? "#22c55e" : diff < 0 ? "#f87171" : "#9ca3af";
+          const sign = diff > 0 ? "+" : "";
+          netHtml = `<div class="t-net" style="color:${netColor}">${sign}${formatWon(diff)}</div>`;
+        }
         tooltip.innerHTML = `
           <div class="t-month">${monthLabel(t.key)}</div>
-          <div class="t-value">${formatWon(t.cumulative)}</div>
-          <div class="t-net" style="color:${netColor}">${netSign}${formatWon(t.net)}</div>
+          <div class="t-value">${formatWon(t.value)}</div>
+          ${netHtml}
         `;
         tooltip.classList.add("visible");
       }
@@ -590,22 +818,49 @@
       }, { passive: true });
     }
 
-    function render() {
-      const timeline = buildTimeline();
-      renderSummary(timeline);
-      renderTable(timeline);
-      renderChart(timeline);
-    }
+    const listEl = document.getElementById("assetItemsList");
 
-    const startingInput = document.getElementById("startingAssetsInput");
-    startingInput.value = data.startingAssets || "";
-    startingInput.addEventListener("input", (e) => {
-      data.startingAssets = Number(e.target.value) || 0;
+    listEl.addEventListener("input", (e) => {
+      const row = e.target.closest(".asset-item-row");
+      if (!row) return;
+      const item = data.assetItems.find((it) => it.id === row.dataset.id);
+      if (!item) return;
+      if (e.target.classList.contains("asset-name")) {
+        item.name = e.target.value;
+      } else if (e.target.classList.contains("asset-amount")) {
+        item.amount = Number(e.target.value) || 0;
+      }
+      recordSnapshot();
       saveData(data);
-      render();
+      renderRest();
     });
 
-    render();
+    listEl.addEventListener("click", (e) => {
+      const btn = e.target.closest(".asset-del");
+      if (!btn) return;
+      const row = btn.closest(".asset-item-row");
+      data.assetItems = data.assetItems.filter((it) => it.id !== row.dataset.id);
+      recordSnapshot();
+      saveData(data);
+      renderAssetItems();
+      renderRest();
+    });
+
+    document.getElementById("addAssetItem").addEventListener("click", () => {
+      data.assetItems.push({ id: genId(), name: "", amount: 0 });
+      saveData(data);
+      renderAssetItems();
+      renderRest();
+      const rows = listEl.querySelectorAll(".asset-name");
+      if (rows.length) rows[rows.length - 1].focus();
+    });
+
+    if (totalAssets() > 0 || Object.keys(data.assetSnapshots).length > 0) {
+      recordSnapshot();
+      saveData(data);
+    }
+    renderAssetItems();
+    renderRest();
   </script>
 </body>
 </html>
