@@ -273,7 +273,8 @@
 
     .item-row input:focus { outline: none; border-color: var(--accent-3); }
 
-    .item-row input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
+    .item-row input[type="number"],
+    .item-row input[data-money] { text-align: right; font-variant-numeric: tabular-nums; }
 
     .item-value,
     .item-pl {
@@ -703,6 +704,7 @@
     </footer>
   </div>
 
+  <script src="money-input.js"></script>
   <script>
     const STORAGE_KEY = "salaryAppData_v1";
     const PALETTE = ["#22c55e", "#38bdf8", "#a78bfa", "#f97316", "#f472b6", "#facc15", "#2dd4bf", "#fb7185", "#60a5fa", "#94a3b8"];
@@ -1035,8 +1037,8 @@
         <div class="item-row holding" data-item-id="${it.id}">
           <input type="text" class="item-name" value="${escapeHtml(it.name)}" maxlength="24" placeholder="종목명" />
           <input type="number" class="item-qty" value="${it.qty || ""}" min="0" step="any" placeholder="수량" />
-          <input type="number" class="item-avg" value="${it.avgPrice || ""}" min="0" step="any" placeholder="평균단가" />
-          <input type="number" class="item-cur" value="${it.curPrice || ""}" min="0" step="any" placeholder="현재가" />
+          <input type="text" inputmode="decimal" data-money class="item-avg" value="${Money.display(it.avgPrice)}" placeholder="평균단가" />
+          <input type="text" inputmode="decimal" data-money class="item-cur" value="${Money.display(it.curPrice)}" placeholder="현재가" />
           <span class="item-value" data-item-value data-label="평가금액"></span>
           <span class="item-pl" data-item-pl data-label="손익"></span>
           <button class="icon-btn del-item" type="button" aria-label="종목 삭제">✕</button>
@@ -1048,7 +1050,7 @@
       return `
         <div class="item-row" data-item-id="${it.id}">
           <input type="text" class="item-name" value="${escapeHtml(it.name)}" maxlength="24" placeholder="세부 항목 이름" />
-          <input type="number" class="item-amount" value="${it.amount || ""}" min="0" step="10000" placeholder="0" />
+          <input type="text" inputmode="decimal" data-money class="item-amount" value="${Money.display(it.amount)}" placeholder="0" />
           <button class="icon-btn del-item" type="button" aria-label="항목 삭제">✕</button>
         </div>
       `;
@@ -1508,10 +1510,10 @@
         const item = group.items.find((it) => it.id === row.dataset.itemId);
         if (!item) return;
         if (e.target.classList.contains("item-name")) item.name = e.target.value;
-        else if (e.target.classList.contains("item-amount")) item.amount = Number(e.target.value) || 0;
+        else if (e.target.classList.contains("item-amount")) item.amount = Money.read(e.target);
         else if (e.target.classList.contains("item-qty")) item.qty = Number(e.target.value) || 0;
-        else if (e.target.classList.contains("item-avg")) item.avgPrice = Number(e.target.value) || 0;
-        else if (e.target.classList.contains("item-cur")) item.curPrice = Number(e.target.value) || 0;
+        else if (e.target.classList.contains("item-avg")) item.avgPrice = Money.read(e.target);
+        else if (e.target.classList.contains("item-cur")) item.curPrice = Money.read(e.target);
       }
 
       recordSnapshot();
@@ -1700,6 +1702,7 @@
       recordSnapshot();
     }
     saveData(data);
+    Money.attach(document);
     renderAll();
     fillBackupBox();
     announceRecovery();
