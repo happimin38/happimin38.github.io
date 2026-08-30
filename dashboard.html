@@ -462,6 +462,25 @@
 
     .table-scroll { overflow-x: auto; }
 
+    /* Recovery notice */
+    .notice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(34, 197, 94, 0.45);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    /* display:flex above would otherwise defeat the hidden attribute. */
+    .notice[hidden] { display: none; }
+
+    .notice-text { font-size: 13px; color: #bbf7d0; }
+
     /* Backup / restore */
     .backup-actions {
       display: flex;
@@ -557,6 +576,11 @@
         <a href="index.html">← 포트폴리오로</a>
       </div>
     </header>
+
+    <div class="notice" id="recoveryNotice" hidden>
+      <div class="notice-text" id="recoveryText"></div>
+      <button class="btn-line" id="undoRecovery" type="button">되돌리기</button>
+    </div>
 
     <div class="summary-grid">
       <div class="summary-card">
@@ -709,7 +733,88 @@
       };
     }
 
+    /* ---------- Automatic recovery ---------- */
+
+    // Entries kept under a key this page no longer reads are still in storage,
+    // just unreachable. Rather than make that the reader's problem, the richest
+    // such record is adopted automatically whenever the current one is empty.
+    function assetTotalOf(d) {
+      if (!d || !Array.isArray(d.assetGroups)) return 0;
+      return d.assetGroups.reduce(
+        (sum, g) =>
+          sum +
+          (g.items || []).reduce(
+            (t, it) =>
+              t + (Number(it.amount) || 0) + (Number(it.qty) || 0) * (Number(it.curPrice) || 0),
+            0
+          ),
+        0
+      );
+    }
+
+    function hasAssetContent(d) {
+      if (!d || typeof d !== "object") return false;
+      if (assetTotalOf(d) > 0) return true;
+      if (Array.isArray(d.assetItems) && d.assetItems.some((it) => Number(it.amount) > 0)) return true;
+      if (Number(d.startingAssets) > 0) return true;
+      if (d.assetSnapshots && Object.keys(d.assetSnapshots).length > 0) return true;
+      return false;
+    }
+
+    function recordScore(d) {
+      const total = assetTotalOf(d);
+      const legacy =
+        (Array.isArray(d.assetItems) ? d.assetItems.reduce((s, it) => s + (Number(it.amount) || 0), 0) : 0) +
+        (Number(d.startingAssets) || 0);
+      const snapshots = d.assetSnapshots ? Object.keys(d.assetSnapshots).length : 0;
+      return Math.max(total, legacy) + snapshots;
+    }
+
+    function otherStoredRecords() {
+      const found = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || key === STORAGE_KEY || !key.includes("salaryAppData")) continue;
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          try {
+            const parsed = JSON.parse(raw);
+            if (hasAssetContent(parsed)) found.push({ key, raw, parsed, score: recordScore(parsed) });
+          } catch (e) {
+            // not our data; skip
+          }
+        }
+      } catch (e) {
+        // storage unavailable
+      }
+      return found.sort((a, b) => b.score - a.score);
+    }
+
     let data = loadData();
+    let recoveredFrom = null;
+
+    // recoveryOptOut marks a recovery the reader undid, so the same record is
+    // not adopted again on the next visit.
+    if (!hasAssetContent(data) && !data.recoveryOptOut) {
+      const candidates = otherStoredRecords();
+      if (candidates.length) {
+        const previous = data;
+        data = candidates[0].parsed;
+        recoveredFrom = candidates[0].key;
+        // The salary page's records live in the same object; keep whatever the
+        // current key already had if the adopted one carries none.
+        if (
+          previous.months &&
+          Object.keys(previous.months).length &&
+          !(data.months && Object.keys(data.months).length)
+        ) {
+          data.months = previous.months;
+        }
+        // The original is left untouched, so this is reversible.
+        saveData(data);
+      }
+    }
 
     // Migrate older shapes so nothing already entered is lost:
     //  - assetItems (flat list) -> each becomes its own group with one item
@@ -1467,43 +1572,36 @@
       location.reload();
     });
 
-    // Data saved under a key this page no longer reads would otherwise be
-    // invisible; surface it so it can be restored rather than lost.
-    function findStrandedBackups() {
-      const found = [];
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (!key || key === STORAGE_KEY || !key.includes("salaryAppData")) continue;
-          const raw = localStorage.getItem(key);
-          if (!raw) continue;
-          try {
-            const parsed = JSON.parse(raw);
-            const hasAssets =
-              (Array.isArray(parsed.assetGroups) && parsed.assetGroups.length) ||
-              (Array.isArray(parsed.assetItems) && parsed.assetItems.length) ||
-              parsed.startingAssets;
-            if (hasAssets) found.push({ key, raw });
-          } catch (e) {
-            // not our data; skip
-          }
-        }
-      } catch (e) {
-        // storage unavailable
+    function announceRecovery() {
+      const others = otherStoredRecords();
+
+      if (recoveredFrom) {
+        const notice = document.getElementById("recoveryNotice");
+        const extra = others.length > 1 ? ` 다른 기록 ${others.length - 1}개도 남아 있어요.` : "";
+        document.getElementById("recoveryText").textContent =
+          `예전에 저장해 두신 기록을 자동으로 되살렸어요 (총 ${formatWon(totalAssets())}).${extra} 원래대로 되돌리려면 되돌리기를 누르세요.`;
+        notice.hidden = false;
+        return;
       }
-      return found;
+
+      // Nothing was adopted because this page already had entries; say what
+      // else is available rather than leaving it hidden.
+      if (others.length) {
+        backupBox.value = others[0].raw;
+        showBackupMsg(
+          `다른 기록(${others[0].key})도 저장되어 있어요. 그 내용으로 바꾸려면 "아래 내용으로 복원"을 누르세요.`,
+          true
+        );
+      }
     }
 
-    function offerStrandedBackups() {
-      if (totalAssets() > 0) return;
-      const found = findStrandedBackups();
-      if (!found.length) return;
-      backupBox.value = found[0].raw;
-      showBackupMsg(
-        `예전에 저장된 기록(${found[0].key})을 찾았어요. 아래 내용을 확인하고 "아래 내용으로 복원"을 눌러주세요.`,
-        true
-      );
-    }
+    document.getElementById("undoRecovery").addEventListener("click", () => {
+      if (!confirm("되살린 기록을 지우고 빈 상태로 되돌립니다. 계속할까요?")) return;
+      // The record this came from was never modified, so it stays recoverable
+      // from the backup panel below even though it is no longer adopted.
+      saveData({ months: data.months || {}, recoveryOptOut: true });
+      location.reload();
+    });
 
     // Only start recording history once there is something to record.
     if (totalAssets() > 0 || Object.keys(data.assetSnapshots).length > 0) {
@@ -1512,7 +1610,7 @@
     saveData(data);
     renderAll();
     fillBackupBox();
-    offerStrandedBackups();
+    announceRecovery();
   </script>
 </body>
 </html>
