@@ -462,6 +462,49 @@
 
     .table-scroll { overflow-x: auto; }
 
+    /* Backup / restore */
+    .backup-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .btn-line {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(2, 6, 23, 0.8);
+      color: var(--text-main);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .btn-line:hover { border-color: var(--accent-3); color: var(--accent-3); }
+
+    .backup-msg { font-size: 11px; color: var(--accent-2); }
+    .backup-msg.error { color: var(--danger); }
+
+    .backup-box {
+      width: 100%;
+      min-height: 90px;
+      resize: vertical;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(2, 6, 23, 0.8);
+      color: var(--text-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .backup-box:focus { outline: none; border-color: var(--accent-3); color: var(--text-main); }
+
+    .backup-hint { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+
     footer {
       margin-top: 28px;
       font-size: 11px;
@@ -588,8 +631,30 @@
       </div>
     </section>
 
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">데이터 백업 / 복원</div>
+        <div class="panel-sub">다른 기기로 옮기거나, 예전에 입력한 내용을 되살릴 때 쓰세요</div>
+      </div>
+      <div class="backup-actions">
+        <button class="btn-line" id="copyBackup" type="button">백업 내용 복사</button>
+        <button class="btn-line" id="downloadBackup" type="button">파일로 저장</button>
+        <button class="btn-line" id="restoreBackup" type="button">아래 내용으로 복원</button>
+        <span class="backup-msg" id="backupMsg"></span>
+      </div>
+      <textarea
+        id="backupBox"
+        class="backup-box"
+        spellcheck="false"
+        placeholder="여기에 백업 내용을 붙여넣고 '아래 내용으로 복원'을 누르세요."
+      ></textarea>
+      <div class="backup-hint">
+        복원하면 현재 화면의 내용은 붙여넣은 내용으로 바뀝니다. 되돌릴 수 있도록 먼저 "백업 내용 복사"로 지금 상태를 보관해 두세요.
+      </div>
+    </section>
+
     <footer>
-      데이터는 이 브라우저에만 저장됩니다 (localStorage). 다른 기기에서는 보이지 않아요.
+      데이터는 이 브라우저에만 저장됩니다 (localStorage). 다른 기기·다른 브라우저에서는 보이지 않으니, 중요한 기록은 위에서 백업해 두세요.
     </footer>
   </div>
 
@@ -1328,12 +1393,126 @@
       if (nameInput) nameInput.focus();
     });
 
+    /* ---------- Backup / restore ---------- */
+
+    const backupBox = document.getElementById("backupBox");
+    const backupMsg = document.getElementById("backupMsg");
+
+    function showBackupMsg(text, isError) {
+      backupMsg.textContent = text;
+      backupMsg.className = "backup-msg" + (isError ? " error" : "");
+    }
+
+    function fillBackupBox() {
+      backupBox.value = JSON.stringify(data, null, 2);
+    }
+
+    document.getElementById("copyBackup").addEventListener("click", async () => {
+      fillBackupBox();
+      try {
+        await navigator.clipboard.writeText(backupBox.value);
+        showBackupMsg("복사했어요. 안전한 곳에 붙여넣어 두세요.");
+      } catch (e) {
+        // Clipboard access can be blocked; selecting the text still lets the
+        // user copy it by hand.
+        backupBox.focus();
+        backupBox.select();
+        showBackupMsg("아래 내용을 직접 복사해 주세요 (Ctrl+C).", true);
+      }
+    });
+
+    document.getElementById("downloadBackup").addEventListener("click", () => {
+      fillBackupBox();
+      try {
+        const blob = new Blob([backupBox.value], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `자산백업-${currentMonthKey()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showBackupMsg("파일로 저장했어요.");
+      } catch (e) {
+        showBackupMsg("이 브라우저에서는 저장이 막혀 있어요. 복사 기능을 써주세요.", true);
+      }
+    });
+
+    document.getElementById("restoreBackup").addEventListener("click", () => {
+      const text = backupBox.value.trim();
+      if (!text) {
+        showBackupMsg("복원할 내용을 먼저 붙여넣어 주세요.", true);
+        return;
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch (e) {
+        showBackupMsg("형식을 읽을 수 없어요. 백업 내용 전체를 붙여넣었는지 확인해 주세요.", true);
+        return;
+      }
+      if (!parsed || typeof parsed !== "object") {
+        showBackupMsg("자산 데이터가 아닌 것 같아요.", true);
+        return;
+      }
+      if (!Array.isArray(parsed.assetGroups) && !Array.isArray(parsed.assetItems) && !parsed.months) {
+        showBackupMsg("자산 데이터가 아닌 것 같아요.", true);
+        return;
+      }
+      if (!confirm("현재 내용을 붙여넣은 내용으로 바꿉니다. 계속할까요?")) return;
+
+      saveData(parsed);
+      showBackupMsg("복원했어요. 새로고침합니다…");
+      location.reload();
+    });
+
+    // Data saved under a key this page no longer reads would otherwise be
+    // invisible; surface it so it can be restored rather than lost.
+    function findStrandedBackups() {
+      const found = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || key === STORAGE_KEY || !key.includes("salaryAppData")) continue;
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          try {
+            const parsed = JSON.parse(raw);
+            const hasAssets =
+              (Array.isArray(parsed.assetGroups) && parsed.assetGroups.length) ||
+              (Array.isArray(parsed.assetItems) && parsed.assetItems.length) ||
+              parsed.startingAssets;
+            if (hasAssets) found.push({ key, raw });
+          } catch (e) {
+            // not our data; skip
+          }
+        }
+      } catch (e) {
+        // storage unavailable
+      }
+      return found;
+    }
+
+    function offerStrandedBackups() {
+      if (totalAssets() > 0) return;
+      const found = findStrandedBackups();
+      if (!found.length) return;
+      backupBox.value = found[0].raw;
+      showBackupMsg(
+        `예전에 저장된 기록(${found[0].key})을 찾았어요. 아래 내용을 확인하고 "아래 내용으로 복원"을 눌러주세요.`,
+        true
+      );
+    }
+
     // Only start recording history once there is something to record.
     if (totalAssets() > 0 || Object.keys(data.assetSnapshots).length > 0) {
       recordSnapshot();
     }
     saveData(data);
     renderAll();
+    fillBackupBox();
+    offerStrandedBackups();
   </script>
 </body>
 </html>
