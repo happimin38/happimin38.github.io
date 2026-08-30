@@ -421,7 +421,7 @@
             <option value="경조사">경조사</option>
             <option value="기타">기타</option>
           </select>
-          <input type="number" id="expenseAmount" placeholder="금액" min="0" step="any" required />
+          <input type="text" inputmode="decimal" data-money id="expenseAmount" placeholder="금액" required />
           <input type="date" id="expenseDate" class="full" />
           <input type="text" id="expenseMemo" class="full" placeholder="메모 (선택)" maxlength="40" />
           <button type="submit" class="btn-add">+ 지출 추가</button>
@@ -445,6 +445,7 @@
     </footer>
   </div>
 
+  <script src="money-input.js"></script>
   <script>
     const STORAGE_KEY = "salaryAppData_v1";
     const CATEGORY_COLORS = {
@@ -733,7 +734,7 @@
       e.preventDefault();
       const viewedKey = monthKey(currentDate);
       const category = document.getElementById("expenseCategory").value;
-      const amount = Number(document.getElementById("expenseAmount").value) || 0;
+      const amount = Money.read(document.getElementById("expenseAmount"));
       const date = document.getElementById("expenseDate").value || viewedKey + "-01";
       const memo = document.getElementById("expenseMemo").value.trim();
 
@@ -764,6 +765,7 @@
       render();
     });
 
+    Money.attach(document);
     render();
   </script>
 </body>
