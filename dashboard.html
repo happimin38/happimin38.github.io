@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>자산 대시보드 · 월급 관리</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="저축, 주식, 연금 등 그룹별로 자산을 나눠 입력하고 총자산과 변화 추이를 확인하는 대시보드" />
+  <meta name="description" content="저축·연금은 금액으로, 주식·코인은 종목별 수량과 단가로 나눠 관리하는 자산 대시보드" />
   <style>
     :root {
       --bg-color: #050816;
@@ -85,7 +85,7 @@
     /* Summary tiles */
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       gap: 14px;
       margin-bottom: 20px;
     }
@@ -109,10 +109,13 @@
     .dot { width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; }
 
     .summary-value {
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+
+    .summary-value.up { color: var(--accent-2); }
+    .summary-value.down { color: var(--danger); }
 
     .summary-sub { font-size: 11px; margin-top: 4px; font-variant-numeric: tabular-nums; }
     .summary-sub.up { color: var(--accent-2); }
@@ -120,14 +123,6 @@
     .summary-sub.flat { color: var(--text-muted); }
 
     /* Panels */
-    .main-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-      gap: 20px;
-      align-items: flex-start;
-      margin-bottom: 20px;
-    }
-
     .panel {
       border-radius: 18px;
       border: 1px solid var(--border-subtle);
@@ -136,7 +131,15 @@
       margin-bottom: 20px;
     }
 
-    .main-grid .panel { margin-bottom: 0; }
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .two-col .panel { margin-bottom: 0; }
 
     .panel-header {
       display: flex;
@@ -163,7 +166,7 @@
 
     .group-head {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto 26px;
+      grid-template-columns: minmax(0, 1fr) auto auto 26px;
       gap: 8px;
       align-items: center;
       margin-bottom: 10px;
@@ -179,6 +182,7 @@
       font-size: 14px;
       font-weight: 600;
       font-family: inherit;
+      min-width: 0;
     }
 
     .group-name:hover { border-color: rgba(148, 163, 184, 0.3); }
@@ -188,22 +192,57 @@
       background: rgba(2, 6, 23, 0.8);
     }
 
+    .group-type {
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(2, 6, 23, 0.8);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .group-type:focus { outline: none; border-color: var(--accent-3); }
+
+    .group-totals { text-align: right; white-space: nowrap; }
+
     .group-total {
       font-size: 13px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
-      white-space: nowrap;
       color: var(--group-color, var(--text-main));
     }
 
+    .group-pl { font-size: 11px; font-variant-numeric: tabular-nums; display: block; }
+    .group-pl.up { color: var(--accent-2); }
+    .group-pl.down { color: var(--danger); }
+    .group-pl.flat { color: var(--text-muted); }
+
     .items-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 
-    .item-row {
+    .item-row,
+    .item-head {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 120px 26px;
       gap: 6px;
       align-items: center;
     }
+
+    .item-row.holding,
+    .item-head.holding {
+      grid-template-columns: minmax(0, 1fr) 76px 108px 108px 116px 128px 26px;
+    }
+
+    .item-head {
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 0 2px 2px;
+      letter-spacing: 0.02em;
+    }
+
+    .item-head span { text-align: right; }
+    .item-head span:first-child { text-align: left; }
 
     .item-row input {
       width: 100%;
@@ -214,11 +253,35 @@
       color: var(--text-main);
       font-size: 13px;
       font-family: inherit;
+      min-width: 0;
     }
 
     .item-row input:focus { outline: none; border-color: var(--accent-3); }
 
-    .item-row .item-amount { text-align: right; font-variant-numeric: tabular-nums; }
+    .item-row input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .item-value,
+    .item-pl {
+      font-size: 12px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-value { font-weight: 600; }
+    .item-pl.up { color: var(--accent-2); }
+    .item-pl.down { color: var(--danger); }
+    .item-pl.flat { color: var(--text-muted); }
+
+    .item-value::before,
+    .item-pl::before {
+      content: attr(data-label) " ";
+      color: var(--text-muted);
+      font-weight: 400;
+      display: none;
+    }
 
     .icon-btn {
       width: 26px;
@@ -309,20 +372,24 @@
     .bd-items {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
       padding-left: 14px;
       margin-top: 2px;
     }
 
     .bd-item {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 8px;
       font-size: 11px;
       color: var(--text-muted);
     }
 
-    .bd-item span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bd-item .bd-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bd-item .bd-item-val { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bd-item .bd-item-pl { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 74px; text-align: right; }
+    .bd-item .bd-item-pl.up { color: var(--accent-2); }
+    .bd-item .bd-item-pl.down { color: var(--danger); }
 
     .empty-state {
       font-size: 12px;
@@ -333,7 +400,7 @@
 
     /* Chart */
     .chart-wrap { position: relative; width: 100%; overflow-x: auto; }
-    .chart-wrap svg { display: block; width: 100%; height: auto; min-width: 480px; }
+    .chart-wrap svg { display: block; width: 100%; height: auto; min-width: 420px; }
 
     .chart-empty {
       font-size: 13px;
@@ -402,10 +469,33 @@
       text-align: center;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 860px) {
       .page { padding: 20px 16px 48px; }
       .summary-value { font-size: 18px; }
-      .main-grid { grid-template-columns: minmax(0, 1fr); }
+      .two-col { grid-template-columns: minmax(0, 1fr); }
+
+      /* Holding rows become stacked cards; the header row no longer applies. */
+      .item-head.holding { display: none; }
+
+      .item-row.holding {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 10px;
+        background: rgba(2, 6, 23, 0.4);
+      }
+
+      .item-row.holding .item-name { grid-column: 1 / -1; }
+      .item-row.holding .item-value,
+      .item-row.holding .item-pl {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+      }
+      .item-row.holding .item-value::before,
+      .item-row.holding .item-pl::before { display: inline; }
+      .item-row.holding .del-item { grid-column: 1 / -1; width: 100%; }
     }
   </style>
 </head>
@@ -416,7 +506,7 @@
         <div class="brand-logo">📈</div>
         <div class="brand-text">
           <div class="brand-name">자산 대시보드</div>
-          <div class="brand-role">그룹별 자산과 변화 추이</div>
+          <div class="brand-role">그룹별 자산과 투자 손익</div>
         </div>
       </div>
       <div class="nav-links">
@@ -436,6 +526,11 @@
         <div class="summary-sub" id="statChangeSub"></div>
       </div>
       <div class="summary-card">
+        <div class="summary-label"><span class="dot" style="background:#a78bfa"></span>투자 평가손익</div>
+        <div class="summary-value" id="statPL">-</div>
+        <div class="summary-sub" id="statPLSub"></div>
+      </div>
+      <div class="summary-card">
         <div class="summary-label"><span class="dot" style="background:#facc15"></span>최고 기록</div>
         <div class="summary-value" id="statPeak">0원</div>
       </div>
@@ -446,20 +541,20 @@
       </div>
     </div>
 
-    <div class="main-grid">
-      <section class="panel">
-        <div class="panel-header">
-          <div class="panel-title">자산 항목</div>
-          <div class="panel-sub">그룹 안에 세부 항목을 추가하세요</div>
-        </div>
-        <div class="groups-list" id="groupsList"></div>
-        <button class="btn-add-group" id="addGroup" type="button">+ 그룹 추가</button>
-        <div class="grand-total-row">
-          <span>총합계</span>
-          <span class="grand-total-value" id="grandTotal">0원</span>
-        </div>
-      </section>
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">자산 항목</div>
+        <div class="panel-sub">주식·코인 그룹은 "투자"로 두면 종목별 수량과 손익이 계산돼요</div>
+      </div>
+      <div class="groups-list" id="groupsList"></div>
+      <button class="btn-add-group" id="addGroup" type="button">+ 그룹 추가</button>
+      <div class="grand-total-row">
+        <span>총합계</span>
+        <span class="grand-total-value" id="grandTotal">0원</span>
+      </div>
+    </section>
 
+    <div class="two-col">
       <section class="panel">
         <div class="panel-header">
           <div class="panel-title">그룹별 비중</div>
@@ -468,17 +563,17 @@
           <div class="empty-state">금액을 입력하면 비중이 표시돼요.</div>
         </div>
       </section>
-    </div>
 
-    <section class="panel">
-      <div class="panel-header">
-        <div class="panel-title">자산 증가 추이</div>
-        <div class="panel-sub" id="chartRange"></div>
-      </div>
-      <div class="chart-wrap" id="chartWrap">
-        <div class="chart-empty">금액을 입력하면 추이가 기록되기 시작해요.</div>
-      </div>
-    </section>
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">자산 증가 추이</div>
+          <div class="panel-sub" id="chartRange"></div>
+        </div>
+        <div class="chart-wrap" id="chartWrap">
+          <div class="chart-empty">금액을 입력하면 추이가 기록되기 시작해요.</div>
+        </div>
+      </section>
+    </div>
 
     <section class="panel">
       <div class="panel-header">
@@ -501,6 +596,8 @@
   <script>
     const STORAGE_KEY = "salaryAppData_v1";
     const PALETTE = ["#22c55e", "#38bdf8", "#a78bfa", "#f97316", "#f472b6", "#facc15", "#2dd4bf", "#fb7185", "#60a5fa", "#94a3b8"];
+    // Groups with these names track individual holdings rather than one lump sum.
+    const HOLDING_NAMES = ["주식", "비트코인", "코인", "가상화폐", "etf", "펀드", "암호화폐"];
 
     function loadData() {
       try {
@@ -541,12 +638,26 @@
         ];
       } else {
         data.assetGroups = [
-          { id: genId(), name: "저축", items: [{ id: genId(), name: "", amount: 0 }] },
-          { id: genId(), name: "주식", items: [{ id: genId(), name: "", amount: 0 }] },
-          { id: genId(), name: "연금", items: [{ id: genId(), name: "", amount: 0 }] },
+          { id: genId(), name: "저축", type: "simple", items: [{ id: genId(), name: "", amount: 0 }] },
+          { id: genId(), name: "주식", type: "holding", items: [{ id: genId(), name: "", qty: 0, avgPrice: 0, curPrice: 0 }] },
+          { id: genId(), name: "연금", type: "simple", items: [{ id: genId(), name: "", amount: 0 }] },
         ];
       }
     }
+
+    // Groups predating the investment mode default to "simple". A stock-like
+    // group with nothing entered yet is switched over, since converting real
+    // amounts would invent share counts nobody typed.
+    data.assetGroups.forEach((g) => {
+      if (g.type === "simple" || g.type === "holding") return;
+      const looksLikeHolding = HOLDING_NAMES.includes((g.name || "").trim().toLowerCase());
+      const isEmpty = g.items.every((it) => !(Number(it.amount) || 0));
+      g.type = looksLikeHolding && isEmpty ? "holding" : "simple";
+      if (g.type === "holding") {
+        g.items = g.items.map((it) => ({ id: it.id, name: it.name || "", qty: 0, avgPrice: 0, curPrice: 0 }));
+      }
+    });
+
     if (typeof data.assetSnapshots !== "object" || data.assetSnapshots === null) {
       data.assetSnapshots = {};
     }
@@ -555,11 +666,25 @@
       return Math.round(n).toLocaleString("ko-KR") + "원";
     }
 
+    function formatSigned(n) {
+      const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+      return sign + Math.abs(Math.round(n)).toLocaleString("ko-KR") + "원";
+    }
+
     function formatWonShort(n) {
       const abs = Math.abs(n);
       if (abs >= 100000000) return (n / 100000000).toFixed(1) + "억";
       if (abs >= 10000) return Math.round(n / 10000) + "만";
       return Math.round(n).toLocaleString("ko-KR");
+    }
+
+    function formatQty(n) {
+      const v = Number(n) || 0;
+      return Number.isInteger(v) ? v.toLocaleString("ko-KR") : String(v);
+    }
+
+    function plClass(n) {
+      return n > 0 ? "up" : n < 0 ? "down" : "flat";
     }
 
     function monthLabel(key) {
@@ -582,12 +707,40 @@
       return PALETTE[index % PALETTE.length];
     }
 
+    /* ---------- Value model ---------- */
+
+    function itemValue(group, it) {
+      if (group.type === "holding") return (Number(it.qty) || 0) * (Number(it.curPrice) || 0);
+      return Number(it.amount) || 0;
+    }
+
+    function itemCost(group, it) {
+      if (group.type === "holding") return (Number(it.qty) || 0) * (Number(it.avgPrice) || 0);
+      return Number(it.amount) || 0;
+    }
+
     function groupTotal(group) {
-      return group.items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+      return group.items.reduce((sum, it) => sum + itemValue(group, it), 0);
+    }
+
+    function groupCost(group) {
+      return group.items.reduce((sum, it) => sum + itemCost(group, it), 0);
     }
 
     function totalAssets() {
       return data.assetGroups.reduce((sum, g) => sum + groupTotal(g), 0);
+    }
+
+    function investedCost() {
+      return data.assetGroups
+        .filter((g) => g.type === "holding")
+        .reduce((sum, g) => sum + groupCost(g), 0);
+    }
+
+    function investedValue() {
+      return data.assetGroups
+        .filter((g) => g.type === "holding")
+        .reduce((sum, g) => sum + groupTotal(g), 0);
     }
 
     function recordSnapshot() {
@@ -620,6 +773,30 @@
 
     /* ---------- Rendering: structure (rebuilds inputs) ---------- */
 
+    function holdingRowHtml(it) {
+      return `
+        <div class="item-row holding" data-item-id="${it.id}">
+          <input type="text" class="item-name" value="${escapeHtml(it.name)}" maxlength="24" placeholder="종목명" />
+          <input type="number" class="item-qty" value="${it.qty || ""}" min="0" step="any" placeholder="수량" />
+          <input type="number" class="item-avg" value="${it.avgPrice || ""}" min="0" step="any" placeholder="평균단가" />
+          <input type="number" class="item-cur" value="${it.curPrice || ""}" min="0" step="any" placeholder="현재가" />
+          <span class="item-value" data-item-value data-label="평가금액"></span>
+          <span class="item-pl" data-item-pl data-label="손익"></span>
+          <button class="icon-btn del-item" type="button" aria-label="종목 삭제">✕</button>
+        </div>
+      `;
+    }
+
+    function simpleRowHtml(it) {
+      return `
+        <div class="item-row" data-item-id="${it.id}">
+          <input type="text" class="item-name" value="${escapeHtml(it.name)}" maxlength="24" placeholder="세부 항목 이름" />
+          <input type="number" class="item-amount" value="${it.amount || ""}" min="0" step="10000" placeholder="0" />
+          <button class="icon-btn del-item" type="button" aria-label="항목 삭제">✕</button>
+        </div>
+      `;
+    }
+
     function renderGroups() {
       const listEl = document.getElementById("groupsList");
       if (data.assetGroups.length === 0) {
@@ -629,26 +806,30 @@
       listEl.innerHTML = data.assetGroups
         .map((g, gi) => {
           const color = groupColor(gi);
-          const itemsHtml = g.items
-            .map(
-              (it) => `
-            <div class="item-row" data-item-id="${it.id}">
-              <input type="text" class="item-name" value="${escapeHtml(it.name)}" maxlength="24" placeholder="세부 항목 이름" />
-              <input type="number" class="item-amount" value="${it.amount || ""}" min="0" step="10000" placeholder="0" />
-              <button class="icon-btn del-item" type="button" aria-label="항목 삭제">✕</button>
-            </div>
-          `
-            )
-            .join("");
+          const isHolding = g.type === "holding";
+          const headHtml = isHolding
+            ? `<div class="item-head holding">
+                 <span>종목명</span><span>수량</span><span>평균단가</span><span>현재가</span><span>평가금액</span><span>손익</span><span></span>
+               </div>`
+            : "";
+          const itemsHtml = g.items.map((it) => (isHolding ? holdingRowHtml(it) : simpleRowHtml(it))).join("");
           return `
             <div class="group-card" data-group-id="${g.id}" style="--group-color:${color}">
               <div class="group-head">
                 <input type="text" class="group-name" value="${escapeHtml(g.name)}" maxlength="20" placeholder="그룹 이름" />
-                <span class="group-total" data-group-total>${formatWon(groupTotal(g))}</span>
+                <select class="group-type" aria-label="관리 방식">
+                  <option value="simple"${isHolding ? "" : " selected"}>금액만</option>
+                  <option value="holding"${isHolding ? " selected" : ""}>투자</option>
+                </select>
+                <span class="group-totals">
+                  <span class="group-total" data-group-total></span>
+                  ${isHolding ? '<span class="group-pl" data-group-pl></span>' : ""}
+                </span>
                 <button class="icon-btn del-group" type="button" aria-label="그룹 삭제">✕</button>
               </div>
+              ${headHtml}
               <div class="items-list">${itemsHtml}</div>
-              <button class="btn-dashed add-item" type="button">+ 항목 추가</button>
+              <button class="btn-dashed add-item" type="button">+ ${isHolding ? "종목" : "항목"} 추가</button>
             </div>
           `;
         })
@@ -661,12 +842,57 @@
       document.querySelectorAll(".group-card").forEach((card) => {
         const group = data.assetGroups.find((g) => g.id === card.dataset.groupId);
         if (!group) return;
-        const el = card.querySelector("[data-group-total]");
-        if (el) el.textContent = formatWon(groupTotal(group));
+
+        card.querySelectorAll(".item-row").forEach((row) => {
+          const item = group.items.find((it) => it.id === row.dataset.itemId);
+          if (!item) return;
+          const valEl = row.querySelector("[data-item-value]");
+          const plEl = row.querySelector("[data-item-pl]");
+          if (valEl) valEl.textContent = formatWon(itemValue(group, item));
+          if (plEl) {
+            const cost = itemCost(group, item);
+            const pl = itemValue(group, item) - cost;
+            const pct = cost > 0 ? (pl / cost) * 100 : 0;
+            plEl.textContent = cost > 0 ? `${formatSigned(pl)} (${pl > 0 ? "+" : pl < 0 ? "−" : ""}${Math.abs(pct).toFixed(1)}%)` : "-";
+            plEl.className = "item-pl " + (cost > 0 ? plClass(pl) : "flat");
+          }
+        });
+
+        const totalEl = card.querySelector("[data-group-total]");
+        if (totalEl) totalEl.textContent = formatWon(groupTotal(group));
+
+        const plEl = card.querySelector("[data-group-pl]");
+        if (plEl) {
+          const cost = groupCost(group);
+          const pl = groupTotal(group) - cost;
+          const pct = cost > 0 ? (pl / cost) * 100 : 0;
+          plEl.textContent = cost > 0 ? `${formatSigned(pl)} (${pl > 0 ? "+" : pl < 0 ? "−" : ""}${Math.abs(pct).toFixed(1)}%)` : "매수금액 입력 시 손익 표시";
+          plEl.className = "group-pl " + (cost > 0 ? plClass(pl) : "flat");
+        }
       });
+
       const total = totalAssets();
       document.getElementById("grandTotal").textContent = formatWon(total);
       document.getElementById("statTotal").textContent = formatWon(total);
+
+      // Investment P/L tile
+      const statPL = document.getElementById("statPL");
+      const statPLSub = document.getElementById("statPLSub");
+      const hasHolding = data.assetGroups.some((g) => g.type === "holding");
+      const cost = investedCost();
+      if (hasHolding && cost > 0) {
+        const pl = investedValue() - cost;
+        const pct = (pl / cost) * 100;
+        statPL.textContent = formatSigned(pl);
+        statPL.className = "summary-value " + plClass(pl);
+        statPLSub.textContent = `매수 ${formatWon(cost)} · ${pl > 0 ? "+" : pl < 0 ? "−" : ""}${Math.abs(pct).toFixed(1)}%`;
+        statPLSub.className = "summary-sub " + plClass(pl);
+      } else {
+        statPL.textContent = "-";
+        statPL.className = "summary-value";
+        statPLSub.textContent = hasHolding ? "수량과 단가를 입력해 주세요" : "";
+        statPLSub.className = "summary-sub flat";
+      }
     }
 
     function renderBreakdown() {
@@ -685,17 +911,28 @@
           .map(({ group, color, amount }) => {
             const pct = total > 0 ? (amount / total) * 100 : 0;
             const width = max > 0 ? (amount / max) * 100 : 0;
+            const isHolding = group.type === "holding";
             const itemsHtml = group.items
-              .filter((it) => (Number(it.amount) || 0) > 0)
-              .sort((a, b) => b.amount - a.amount)
-              .map(
-                (it) => `
-                <div class="bd-item">
-                  <span>${escapeHtml(it.name || "이름 없음")}</span>
-                  <span>${formatWon(it.amount)}</span>
-                </div>
-              `
-              )
+              .map((it) => ({ it, value: itemValue(group, it), cost: itemCost(group, it) }))
+              .filter((x) => x.value > 0)
+              .sort((a, b) => b.value - a.value)
+              .map(({ it, value, cost }) => {
+                let plHtml = "";
+                if (isHolding && cost > 0) {
+                  const pl = value - cost;
+                  plHtml = `<span class="bd-item-pl ${plClass(pl)}">${formatSigned(pl)}</span>`;
+                } else {
+                  plHtml = '<span class="bd-item-pl"></span>';
+                }
+                const qtyLabel = isHolding && Number(it.qty) ? ` · ${formatQty(it.qty)}주` : "";
+                return `
+                  <div class="bd-item">
+                    <span class="bd-item-name">${escapeHtml(it.name || "이름 없음")}${qtyLabel}</span>
+                    <span class="bd-item-val">${formatWon(value)}</span>
+                    ${plHtml}
+                  </div>
+                `;
+              })
               .join("");
             return `
               <div class="bd-group">
@@ -711,7 +948,6 @@
           .join("");
       }
 
-      // Largest-group tile
       const statTop = document.getElementById("statTop");
       const statTopSub = document.getElementById("statTopSub");
       if (groups.length > 0) {
@@ -733,8 +969,8 @@
         const last = timeline[timeline.length - 1];
         const prev = timeline[timeline.length - 2];
         const diff = last.value - prev.value;
-        const sign = diff > 0 ? "+" : "";
-        statChange.textContent = `${sign}${formatWon(diff)}`;
+        statChange.textContent = formatSigned(diff);
+        statChange.className = "summary-value " + plClass(diff);
         if (diff > 0) {
           statChangeSub.textContent = `▲ ${monthLabel(prev.key)} → ${monthLabel(last.key)}`;
           statChangeSub.className = "summary-sub up";
@@ -747,6 +983,7 @@
         }
       } else {
         statChange.textContent = "-";
+        statChange.className = "summary-value";
         statChangeSub.textContent = timeline.length === 1 ? "첫 기록이에요" : "";
         statChangeSub.className = "summary-sub flat";
       }
@@ -759,8 +996,9 @@
       const head = document.getElementById("assetTableHead");
       const body = document.getElementById("assetTableBody");
 
-      // Columns follow the group names currently in use.
-      const groupNames = data.assetGroups.map((g) => g.name || "기타").filter((n, i, arr) => arr.indexOf(n) === i);
+      const groupNames = data.assetGroups
+        .map((g) => g.name || "기타")
+        .filter((n, i, arr) => arr.indexOf(n) === i);
 
       head.innerHTML = `
         <tr>
@@ -784,8 +1022,7 @@
           if (prev) {
             const diff = t.value - prev.value;
             const cls = diff > 0 ? "positive" : diff < 0 ? "negative" : "";
-            const sign = diff > 0 ? "+" : "";
-            diffHtml = `<span class="${cls}">${sign}${formatWon(diff)}</span>`;
+            diffHtml = `<span class="${cls}">${formatSigned(diff)}</span>`;
           }
           const groupCells = groupNames
             .map((n) => {
@@ -920,8 +1157,7 @@
         if (prev) {
           const diff = t.value - prev.value;
           const netColor = diff > 0 ? "#22c55e" : diff < 0 ? "#f87171" : "#9ca3af";
-          const sign = diff > 0 ? "+" : "";
-          netHtml = `<div class="t-net" style="color:${netColor}">${sign}${formatWon(diff)}</div>`;
+          netHtml = `<div class="t-net" style="color:${netColor}">${formatSigned(diff)}</div>`;
         }
         tooltip.innerHTML = `
           <div class="t-month">${monthLabel(t.key)}</div>
@@ -972,16 +1208,45 @@
         if (!row) return;
         const item = group.items.find((it) => it.id === row.dataset.itemId);
         if (!item) return;
-        if (e.target.classList.contains("item-name")) {
-          item.name = e.target.value;
-        } else if (e.target.classList.contains("item-amount")) {
-          item.amount = Number(e.target.value) || 0;
-        }
+        if (e.target.classList.contains("item-name")) item.name = e.target.value;
+        else if (e.target.classList.contains("item-amount")) item.amount = Number(e.target.value) || 0;
+        else if (e.target.classList.contains("item-qty")) item.qty = Number(e.target.value) || 0;
+        else if (e.target.classList.contains("item-avg")) item.avgPrice = Number(e.target.value) || 0;
+        else if (e.target.classList.contains("item-cur")) item.curPrice = Number(e.target.value) || 0;
       }
 
       recordSnapshot();
       saveData(data);
       renderDerived();
+    });
+
+    // Switching a group's mode keeps its total intact in both directions.
+    groupsListEl.addEventListener("change", (e) => {
+      if (!e.target.classList.contains("group-type")) return;
+      const card = e.target.closest(".group-card");
+      const group = data.assetGroups.find((g) => g.id === card.dataset.groupId);
+      if (!group) return;
+
+      const nextType = e.target.value;
+      if (nextType === group.type) return;
+
+      if (nextType === "holding") {
+        group.items = group.items.map((it) => {
+          const amount = Number(it.amount) || 0;
+          return { id: it.id, name: it.name || "", qty: amount ? 1 : 0, avgPrice: amount, curPrice: amount };
+        });
+      } else {
+        group.items = group.items.map((it) => ({
+          id: it.id,
+          name: it.name || "",
+          amount: (Number(it.qty) || 0) * (Number(it.curPrice) || 0),
+        }));
+      }
+      group.type = nextType;
+
+      recordSnapshot();
+      saveData(data);
+      renderAll();
     });
 
     groupsListEl.addEventListener("click", (e) => {
@@ -991,13 +1256,19 @@
       const group = data.assetGroups.find((g) => g.id === groupId);
       if (!group) return;
 
+      const isAddItem = !!e.target.closest(".add-item");
+
       if (e.target.closest(".del-group")) {
         data.assetGroups = data.assetGroups.filter((g) => g.id !== groupId);
       } else if (e.target.closest(".del-item")) {
         const row = e.target.closest(".item-row");
         group.items = group.items.filter((it) => it.id !== row.dataset.itemId);
-      } else if (e.target.closest(".add-item")) {
-        group.items.push({ id: genId(), name: "", amount: 0 });
+      } else if (isAddItem) {
+        group.items.push(
+          group.type === "holding"
+            ? { id: genId(), name: "", qty: 0, avgPrice: 0, curPrice: 0 }
+            : { id: genId(), name: "", amount: 0 }
+        );
       } else {
         return;
       }
@@ -1006,7 +1277,7 @@
       saveData(data);
       renderAll();
 
-      if (e.target.closest(".add-item")) {
+      if (isAddItem) {
         const newCard = groupsListEl.querySelector(`[data-group-id="${groupId}"]`);
         const names = newCard ? newCard.querySelectorAll(".item-name") : [];
         if (names.length) names[names.length - 1].focus();
@@ -1014,7 +1285,7 @@
     });
 
     document.getElementById("addGroup").addEventListener("click", () => {
-      const newGroup = { id: genId(), name: "", items: [{ id: genId(), name: "", amount: 0 }] };
+      const newGroup = { id: genId(), name: "", type: "simple", items: [{ id: genId(), name: "", amount: 0 }] };
       data.assetGroups.push(newGroup);
       saveData(data);
       renderAll();
@@ -1026,8 +1297,8 @@
     // Only start recording history once there is something to record.
     if (totalAssets() > 0 || Object.keys(data.assetSnapshots).length > 0) {
       recordSnapshot();
-      saveData(data);
     }
+    saveData(data);
     renderAll();
   </script>
 </body>
