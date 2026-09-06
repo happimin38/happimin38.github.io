@@ -525,7 +525,25 @@
 
     .log-minutes { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
 
-    .log-content { font-size: 13.5px; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+    .log-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text); }
+
+    .log-content { font-size: 13.5px; white-space: pre-wrap; word-break: break-word; color: var(--text-dim); }
+
+    .log-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--warn);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+      background: color-mix(in srgb, var(--warn) 12%, transparent);
+    }
+
+    .log-link:hover { background: color-mix(in srgb, var(--warn) 20%, transparent); }
 
     .log-actions { display: flex; gap: 12px; }
 
@@ -665,12 +683,20 @@
             <select id="fCategory"></select>
           </div>
           <div class="field full">
-            <label for="fContent">오늘 배운 내용</label>
-            <textarea id="fContent" placeholder="예) 가정법 과거완료 문장 5개 만들어봄, 새 단어 10개 암기" required></textarea>
+            <label for="fTitle">한 줄 요약</label>
+            <input type="text" id="fTitle" placeholder="예) 가정법 과거완료 정리" required />
+          </div>
+          <div class="field">
+            <label for="fLink">유튜브 링크 (선택)</label>
+            <input type="url" id="fLink" placeholder="https://youtube.com/watch?v=..." />
           </div>
           <div class="field">
             <label for="fMinutes">학습 시간(분, 선택)</label>
             <input type="number" id="fMinutes" min="0" placeholder="예) 30" />
+          </div>
+          <div class="field full">
+            <label for="fContent">상세 내용 (선택)</label>
+            <textarea id="fContent" placeholder="예) 문장 5개 직접 만들어봄. if I had known, I would have gone. 등"></textarea>
           </div>
         </div>
         <div class="form-actions">
@@ -941,10 +967,30 @@
       head.appendChild(actions);
       item.appendChild(head);
 
-      const content = document.createElement("div");
-      content.className = "log-content";
-      content.textContent = entry.content;
-      item.appendChild(content);
+      if (entry.title) {
+        const title = document.createElement("div");
+        title.className = "log-title";
+        title.textContent = entry.title;
+        item.appendChild(title);
+      }
+
+      if (entry.content) {
+        const content = document.createElement("div");
+        content.className = "log-content";
+        content.textContent = entry.content;
+        item.appendChild(content);
+      }
+
+      if (entry.link && /^https?:\/\//i.test(entry.link)) {
+        const link = document.createElement("a");
+        link.className = "log-link";
+        link.href = entry.link;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.innerHTML =
+          '<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 7.2s-.21-1.49-.86-2.15c-.82-.86-1.74-.87-2.16-.92C15.6 4 12 4 12 4h-.01s-3.6 0-6.58.13c-.42.05-1.34.06-2.16.92-.65.66-.86 2.15-.86 2.15S2 8.95 2 10.69v1.62c0 1.74.2 3.49.2 3.49s.21 1.49.86 2.15c.82.86 1.9.83 2.38.92 1.72.17 7.32.22 7.32.22s3.6 0 6.58-.13c.42-.05 1.34-.06 2.16-.92.65-.66.86-2.15.86-2.15s.2-1.74.2-3.49v-1.62c0-1.74-.2-3.49-.2-3.49zM9.99 14.98v-6l5.4 3.01-5.4 2.99z"/></svg> 영상 보기';
+        item.appendChild(link);
+      }
 
       return item;
     }
@@ -976,6 +1022,8 @@
     const form = document.getElementById("logForm");
     const fDate = document.getElementById("fDate");
     const fCategory = document.getElementById("fCategory");
+    const fTitle = document.getElementById("fTitle");
+    const fLink = document.getElementById("fLink");
     const fContent = document.getElementById("fContent");
     const fMinutes = document.getElementById("fMinutes");
     const submitBtn = document.getElementById("submitBtn");
@@ -1005,7 +1053,9 @@
       editingId = id;
       fDate.value = entry.date;
       fCategory.value = entry.category;
-      fContent.value = entry.content;
+      fTitle.value = entry.title || "";
+      fLink.value = entry.link || "";
+      fContent.value = entry.content || "";
       fMinutes.value = entry.minutes || "";
       submitBtn.textContent = "수정 저장";
       formTitle.textContent = "기록 수정하기";
@@ -1023,14 +1073,18 @@
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const date = fDate.value || todayKey();
+      const title = fTitle.value.trim();
+      const link = fLink.value.trim();
       const content = fContent.value.trim();
-      if (!content) return;
+      if (!title) return;
 
       if (editingId) {
         const entry = data.entries.find((en) => en.id === editingId);
         if (entry) {
           entry.date = date;
           entry.category = fCategory.value;
+          entry.title = title;
+          entry.link = link;
           entry.content = content;
           entry.minutes = Number(fMinutes.value) || 0;
         }
@@ -1039,6 +1093,8 @@
           id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           date,
           category: fCategory.value,
+          title,
+          link,
           content,
           minutes: Number(fMinutes.value) || 0,
         });
@@ -1056,7 +1112,7 @@
     document.getElementById("addHereBtn").addEventListener("click", () => {
       resetForm();
       fDate.value = selectedKey;
-      fContent.focus();
+      fTitle.focus();
     });
 
     document.getElementById("dayDoneCheck").addEventListener("change", (e) => {
