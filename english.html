@@ -7,87 +7,144 @@
   <meta name="description" content="매일 배운 영어를 기록하고 학습 습관을 캘린더로 관리하는 개인용 도구" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
-  <meta name="theme-color" content="#050816" />
+  <meta name="theme-color" content="#171310" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
   <style>
     :root {
-      --accent: #38bdf8;
-      --accent-2: #22c55e;
-      --accent-3: #a78bfa;
-      --danger: #f87171;
-      --text-main: #e5e7eb;
-      --text-muted: #9ca3af;
-      --border-subtle: #1f2937;
-      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR",
-        "Segoe UI", sans-serif;
+      --ink-bg: #171310;
+      --paper: #211b16;
+      --paper-2: #2a231c;
+      --paper-3: #332b21;
+      --hairline: #3d3226;
+      --hairline-soft: #2c2419;
+      --text: #f1e8d8;
+      --text-dim: #b3a58e;
+      --text-faint: #85795f;
+
+      --accent: #eab040;
+      --accent-strong: #f4c766;
+      --accent-ink: #241a08;
+
+      --good: #8bab6e;
+      --warn: #d97757;
+
+      --cat-vocab: #eab040;
+      --cat-grammar: #8fa0d1;
+      --cat-listening: #74b28f;
+      --cat-reading: #d97757;
+      --cat-speaking: #c98fb8;
+      --cat-writing: #a3b578;
+      --cat-etc: #9c8f79;
+
+      --font-display: "Fraunces", "Noto Serif KR", Georgia, serif;
+      --font-body: "IBM Plex Sans KR", system-ui, -apple-system, "Noto Sans KR", sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: var(--font-main);
-      background: radial-gradient(circle at top, #111827 0, #020617 55%);
-      color: var(--text-main);
+      font-family: var(--font-body);
+      background: var(--ink-bg);
+      background-image:
+        radial-gradient(ellipse 900px 500px at 15% -10%, rgba(234, 176, 64, 0.08), transparent 60%),
+        radial-gradient(ellipse 700px 500px at 100% 10%, rgba(201, 143, 184, 0.06), transparent 60%);
+      color: var(--text);
       line-height: 1.6;
       min-height: 100vh;
     }
 
     a { color: inherit; text-decoration: none; }
 
-    .page { max-width: 780px; margin: 0 auto; padding: 32px 20px 80px; }
+    .page { max-width: 900px; margin: 0 auto; padding: 36px 20px 80px; }
 
+    /* Header */
     header {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 24px;
+      gap: 18px;
+      margin-bottom: 28px;
     }
 
-    .brand { display: flex; align-items: center; gap: 14px; }
-
-    .brand-logo {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
-      background: linear-gradient(140deg, #38bdf8, #a78bfa 55%, #22c55e);
+    .mark {
+      position: relative;
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px dashed var(--accent);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: 18px;
-      color: #041016;
-      box-shadow: 0 0 28px rgba(56, 189, 248, 0.35);
+      background: var(--paper-2);
+      transform: rotate(-8deg);
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 600;
+      font-size: 20px;
+      color: var(--accent-strong);
     }
 
-    .brand-name { font-size: 19px; font-weight: 700; }
-    .brand-role { font-size: 12px; color: var(--text-muted); }
+    .mark::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      opacity: 0.45;
+    }
 
-    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .titles h1 {
+      font-family: var(--font-body);
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
 
-    .nav-links a {
+    .titles p {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .top-nav { margin-left: auto; }
+
+    .top-nav a {
       font-size: 12px;
       padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      color: var(--text-main);
-      background: rgba(15, 23, 42, 0.85);
+      border-radius: 8px;
+      border: 1px solid var(--hairline);
+      color: var(--text-dim);
+      background: var(--paper);
     }
 
-    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+    .top-nav a:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+    /* Layout */
+    .top-grid { display: grid; grid-template-columns: 1fr; gap: 18px; margin-bottom: 18px; }
 
     section {
-      border-radius: 20px;
-      border: 1px solid var(--border-subtle);
-      background: rgba(15, 23, 42, 0.9);
-      padding: 20px;
-      margin-bottom: 18px;
+      border-radius: 16px;
+      border: 1px solid var(--hairline);
+      background: var(--paper);
+      padding: 22px;
     }
 
+    section + section { margin-top: 18px; }
+    .top-grid section { margin-top: 0; }
+
     .section-title {
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -95,34 +152,80 @@
       flex-wrap: wrap;
     }
 
-    /* Stats */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 14px;
+    .section-title .count {
+      font-family: var(--font-mono);
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--text-faint);
+      font-size: 12px;
     }
 
-    .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
-    .stat-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .stat-value .unit { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+    /* Streak hero */
+    .streak-panel { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+
+    .flame-icon { flex-shrink: 0; }
+
+    .streak-figure {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 44px;
+      line-height: 1;
+      color: var(--accent-strong);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .streak-figure .unit {
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-left: 4px;
+    }
+
+    .streak-caption { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+    .ledger { display: flex; flex-direction: column; }
+
+    .ledger-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px dashed var(--hairline);
+      font-size: 13px;
+    }
+
+    .ledger-row dt { color: var(--text-dim); }
+
+    .ledger-row dd {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     .goal-edit {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      font-family: var(--font-body);
+      font-weight: 400;
       font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 4px;
+      color: var(--text-faint);
     }
 
     .goal-edit input {
-      width: 42px;
-      background: rgba(2, 6, 23, 0.6);
-      border: 1px solid var(--border-subtle);
+      width: 32px;
+      background: var(--paper-2);
+      border: 1px solid var(--hairline);
       border-radius: 6px;
-      color: var(--text-main);
+      color: var(--text);
+      font-family: var(--font-mono);
       font-size: 12px;
-      padding: 3px 6px;
+      padding: 3px 4px;
       text-align: center;
     }
 
@@ -137,31 +240,37 @@
     .cal-nav-btns { display: flex; align-items: center; gap: 10px; }
 
     .cal-btn {
-      width: 30px;
-      height: 30px;
-      border-radius: 10px;
-      border: 1px solid var(--border-subtle);
-      background: rgba(2, 6, 23, 0.6);
-      color: var(--text-main);
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid var(--hairline);
+      background: var(--paper-2);
+      color: var(--text);
       font-size: 15px;
       cursor: pointer;
     }
 
-    .cal-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .cal-btn:hover { border-color: var(--accent); color: var(--accent-strong); }
 
-    .cal-label { font-size: 14px; font-weight: 700; min-width: 92px; text-align: center; }
+    .cal-label {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 15px;
+      min-width: 96px;
+      text-align: center;
+    }
 
     .cal-today-btn {
       font-size: 11px;
       padding: 5px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      background: rgba(2, 6, 23, 0.6);
-      color: var(--text-muted);
+      border: 1px solid var(--hairline);
+      background: var(--paper-2);
+      color: var(--text-dim);
       cursor: pointer;
     }
 
-    .cal-today-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .cal-today-btn:hover { border-color: var(--accent); color: var(--accent-strong); }
 
     .cal-grid {
       display: grid;
@@ -171,13 +280,15 @@
 
     .cal-weekday {
       text-align: center;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding-bottom: 6px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+      padding-bottom: 8px;
     }
 
-    .cal-weekday.sun { color: var(--danger); }
-    .cal-weekday.sat { color: var(--accent); }
+    .cal-weekday.sun { color: var(--warn); }
+    .cal-weekday.sat { color: var(--cat-grammar); }
 
     .cal-day {
       position: relative;
@@ -185,24 +296,33 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 10px;
+      border-radius: 8px;
       border: 1px solid transparent;
-      background: rgba(2, 6, 23, 0.4);
-      color: var(--text-main);
+      background: var(--paper-2);
+      color: var(--text);
+      font-family: var(--font-mono);
       font-size: 12px;
       cursor: pointer;
       font-variant-numeric: tabular-nums;
     }
 
-    .cal-day.blank { visibility: hidden; cursor: default; }
-    .cal-day:hover { border-color: rgba(148, 163, 184, 0.5); }
-    .cal-day.today { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    .cal-day.blank { visibility: hidden; cursor: default; background: none; }
+    .cal-day:hover { border-color: var(--hairline); background: var(--paper-3); }
+    .cal-day.today { border-color: var(--accent); color: var(--accent-strong); font-weight: 600; }
     .cal-day.done {
-      background: rgba(34, 197, 94, 0.22);
-      color: #bbf7d0;
-      font-weight: 700;
+      background: color-mix(in srgb, var(--good) 22%, var(--paper-2));
+      color: #dcefce;
+      font-weight: 600;
     }
-    .cal-day.selected { outline: 2px solid var(--accent-3); outline-offset: 1px; }
+    .cal-day.done::after {
+      content: "✓";
+      position: absolute;
+      bottom: 1px;
+      right: 3px;
+      font-size: 8px;
+      color: var(--good);
+    }
+    .cal-day.selected { outline: 2px solid var(--cat-speaking); outline-offset: 1px; }
 
     .cal-day .dot {
       position: absolute;
@@ -210,111 +330,172 @@
       width: 4px;
       height: 4px;
       border-radius: 999px;
-      background: var(--accent-2);
+      background: var(--accent);
     }
 
     /* Day panel */
+    .day-card {
+      position: relative;
+      border-style: dashed;
+    }
+
+    .day-tab {
+      position: absolute;
+      top: -11px;
+      left: 20px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+
     .day-panel-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
       flex-wrap: wrap;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
-    .day-panel-date { font-size: 13px; font-weight: 700; }
+    .day-panel-date {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+    }
 
     .check-toggle {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 12px;
-      color: var(--text-muted);
+      color: var(--text-dim);
       cursor: pointer;
     }
 
-    .check-toggle input { width: 16px; height: 16px; accent-color: var(--accent-2); cursor: pointer; }
+    .check-toggle input { width: 16px; height: 16px; accent-color: var(--good); cursor: pointer; }
 
-    .day-entries { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .day-entries { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
 
-    .empty-hint { font-size: 12px; color: var(--text-muted); padding: 6px 0; }
+    .empty-hint { font-size: 12.5px; color: var(--text-faint); padding: 4px 0; }
 
     .add-here-btn {
       font-size: 12px;
       padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--accent);
-      background: rgba(56, 189, 248, 0.12);
-      color: #bae6fd;
+      border-radius: 8px;
+      border: 1px dashed var(--accent);
+      background: transparent;
+      color: var(--accent-strong);
       cursor: pointer;
+      font-family: inherit;
     }
 
-    .add-here-btn:hover { background: rgba(56, 189, 248, 0.2); }
+    .add-here-btn:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
     /* Form */
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 14px;
     }
 
     .field { display: flex; flex-direction: column; gap: 6px; }
     .field.full { grid-column: 1 / -1; }
 
-    .field label { font-size: 11px; color: var(--text-muted); }
+    .field label {
+      font-size: 11px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
 
     .field input,
     .field select,
     .field textarea {
-      background: rgba(2, 6, 23, 0.6);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      color: var(--text-main);
-      font-size: 13px;
+      background: var(--paper-2);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13.5px;
       padding: 10px 12px;
-      font-family: inherit;
+      font-family: var(--font-body);
     }
 
-    .field textarea { resize: vertical; min-height: 78px; }
-    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+    .field input,
+    .field select { font-family: var(--font-mono); }
 
-    .form-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .field textarea {
+      resize: vertical;
+      min-height: 84px;
+      font-family: var(--font-body);
+      line-height: 1.9;
+      background-image: repeating-linear-gradient(
+        var(--paper-2) 0,
+        var(--paper-2) 1.85em,
+        var(--hairline-soft) 1.85em,
+        var(--hairline-soft) calc(1.85em + 1px)
+      );
+      background-attachment: local;
+    }
+
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-actions { display: flex; gap: 8px; margin-top: 16px; }
 
     .btn-primary {
       flex: 1;
-      padding: 11px 16px;
-      border-radius: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
       border: none;
       background: var(--accent);
-      color: #041016;
+      color: var(--accent-ink);
       font-weight: 700;
-      font-size: 13px;
+      font-size: 13.5px;
+      letter-spacing: 0.02em;
       cursor: pointer;
       font-family: inherit;
     }
 
-    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-primary:hover { background: var(--accent-strong); }
 
     .btn-cancel {
-      padding: 11px 16px;
-      border-radius: 12px;
-      border: 1px solid var(--border-subtle);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--hairline);
       background: transparent;
-      color: var(--text-muted);
-      font-size: 13px;
+      color: var(--text-dim);
+      font-size: 13.5px;
       cursor: pointer;
       font-family: inherit;
     }
 
-    /* Log list */
+    /* Log list (timeline) */
+    .log-list { display: flex; flex-direction: column; gap: 16px; }
+
     .log-item {
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 12px 14px;
+      position: relative;
+      padding-left: 18px;
+      border-left: 2px solid var(--cat-color, var(--hairline));
       display: flex;
       flex-direction: column;
       gap: 6px;
+    }
+
+    .log-item::before {
+      content: "";
+      position: absolute;
+      left: -5px;
+      top: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--cat-color, var(--hairline));
     }
 
     .log-item-head {
@@ -325,112 +506,141 @@
       flex-wrap: wrap;
     }
 
-    .log-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .log-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-    .log-date { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .log-date {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+    }
 
     .badge {
       font-size: 11px;
-      padding: 3px 9px;
-      border-radius: 999px;
+      padding: 2px 9px;
+      border-radius: 5px;
       font-weight: 600;
       white-space: nowrap;
     }
 
-    .log-minutes { font-size: 11px; color: var(--text-muted); }
+    .log-minutes { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
 
-    .log-content { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .log-content { font-size: 13.5px; white-space: pre-wrap; word-break: break-word; color: var(--text); }
 
-    .log-actions { display: flex; gap: 6px; }
+    .log-actions { display: flex; gap: 12px; }
 
     .icon-btn {
-      font-size: 11px;
-      padding: 5px 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border-subtle);
-      background: rgba(2, 6, 23, 0.5);
-      color: var(--text-muted);
+      font-size: 11.5px;
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--text-faint);
       cursor: pointer;
       font-family: inherit;
     }
 
-    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+    .icon-btn:hover { color: var(--accent-strong); text-decoration: underline; }
+    .icon-btn.danger:hover { color: var(--warn); }
 
-    .log-list { display: flex; flex-direction: column; gap: 10px; }
-
-    .backup-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .backup-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .backup-row .icon-btn {
+      padding: 7px 12px;
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      color: var(--text-dim);
+    }
+    .backup-row .icon-btn:hover { border-color: var(--accent); text-decoration: none; }
 
     footer {
-      margin-top: 20px;
+      margin-top: 24px;
+      font-family: var(--font-mono);
       font-size: 11px;
-      color: var(--text-muted);
+      color: var(--text-faint);
       text-align: center;
       line-height: 1.8;
     }
 
+    @media (min-width: 760px) {
+      .top-grid { grid-template-columns: 300px 1fr; align-items: start; }
+    }
+
     @media (max-width: 480px) {
-      .page { padding: 20px 14px 48px; }
+      .page { padding: 24px 14px 48px; }
       .form-grid { grid-template-columns: 1fr; }
       .cal-day { font-size: 11px; }
+      .streak-figure { font-size: 36px; }
+      section { padding: 18px; }
     }
   </style>
 </head>
 <body>
   <div class="page">
     <header>
-      <div class="brand">
-        <div class="brand-logo">EN</div>
-        <div>
-          <div class="brand-name">영어 습관 트래커</div>
-          <div class="brand-role">학습 기록 · 습관 캘린더</div>
-        </div>
+      <div class="mark">EN</div>
+      <div class="titles">
+        <h1>영어 습관 트래커</h1>
+        <p>매일 배운 것을 적고, 공부한 날에 표시하세요</p>
       </div>
-      <div class="nav-links">
+      <nav class="top-nav">
         <a href="index.html">← 홈</a>
-      </div>
+      </nav>
     </header>
 
-    <section>
-      <div class="section-title">이번 달 현황</div>
-      <div class="stat-grid">
-        <div>
-          <div class="stat-label">🔥 연속 학습</div>
-          <div class="stat-value" id="statStreak">0<span class="unit">일</span></div>
-        </div>
-        <div>
-          <div class="stat-label">최장 기록</div>
-          <div class="stat-value" id="statLongest">0<span class="unit">일</span></div>
-        </div>
-        <div>
-          <div class="stat-label">이번 달 학습일</div>
-          <div class="stat-value" id="statMonth">0<span class="unit">/0일</span></div>
-        </div>
-        <div>
-          <div class="stat-label">이번 주 목표</div>
-          <div class="stat-value" id="statWeek">0<span class="unit">/0일</span></div>
-          <div class="goal-edit">
-            주 목표
-            <input type="number" id="goalInput" min="1" max="7" />
-            일
+    <div class="top-grid">
+      <section>
+        <div class="section-title">이번 달 현황</div>
+        <div class="streak-panel">
+          <svg class="flame-icon" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true">
+            <defs>
+              <linearGradient id="flameGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="var(--accent-strong)" />
+                <stop offset="1" stop-color="var(--warn)" />
+              </linearGradient>
+            </defs>
+            <path
+              fill="url(#flameGrad)"
+              d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.176 7.547 7.547 0 01-1.705-1.715.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 011.925-3.545 3.75 3.75 0 013.255 3.717z"
+            />
+          </svg>
+          <div>
+            <div class="streak-figure" id="statStreak">0<span class="unit">일째</span></div>
+            <div class="streak-caption">연속 학습 중</div>
           </div>
         </div>
-      </div>
-    </section>
+        <dl class="ledger">
+          <div class="ledger-row">
+            <dt>최장 기록</dt>
+            <dd id="statLongest">0일</dd>
+          </div>
+          <div class="ledger-row">
+            <dt>이번 달 학습일</dt>
+            <dd id="statMonth">0/0일</dd>
+          </div>
+          <div class="ledger-row">
+            <dt>이번 주 목표</dt>
+            <dd>
+              <span id="statWeek">0/0일</span>
+              <span class="goal-edit">· 목표 <input type="number" id="goalInput" min="1" max="7" /></span>
+            </dd>
+          </div>
+        </dl>
+      </section>
 
-    <section>
-      <div class="cal-nav">
-        <div class="cal-nav-btns">
-          <button class="cal-btn" id="prevMonthBtn" aria-label="이전 달">‹</button>
-          <div class="cal-label" id="calLabel"></div>
-          <button class="cal-btn" id="nextMonthBtn" aria-label="다음 달">›</button>
+      <section>
+        <div class="cal-nav">
+          <div class="cal-nav-btns">
+            <button class="cal-btn" id="prevMonthBtn" aria-label="이전 달">‹</button>
+            <div class="cal-label" id="calLabel"></div>
+            <button class="cal-btn" id="nextMonthBtn" aria-label="다음 달">›</button>
+          </div>
+          <button class="cal-today-btn" id="gotoTodayBtn" type="button">오늘</button>
         </div>
-        <button class="cal-today-btn" id="gotoTodayBtn" type="button">오늘</button>
-      </div>
-      <div class="cal-grid" id="calGrid"></div>
-    </section>
+        <div class="cal-grid" id="calGrid"></div>
+      </section>
+    </div>
 
-    <section>
+    <section class="day-card">
+      <span class="day-tab">오늘의 카드</span>
       <div class="day-panel-head">
         <div class="day-panel-date" id="dayPanelDate"></div>
         <label class="check-toggle">
@@ -473,7 +683,7 @@
     <section>
       <div class="section-title">
         <span>학습 기록</span>
-        <span class="stat-label" id="logCount"></span>
+        <span class="count" id="logCount"></span>
       </div>
       <div class="log-list" id="logList"></div>
     </section>
@@ -494,13 +704,13 @@
     const STORAGE_KEY = "englishHabitApp_v1";
 
     const CATEGORIES = [
-      { value: "vocab", label: "단어", color: "#38bdf8" },
-      { value: "grammar", label: "문법", color: "#a78bfa" },
-      { value: "listening", label: "듣기", color: "#22c55e" },
-      { value: "reading", label: "리딩", color: "#f97316" },
-      { value: "speaking", label: "스피킹", color: "#f87171" },
-      { value: "writing", label: "라이팅", color: "#facc15" },
-      { value: "etc", label: "기타", color: "#94a3b8" },
+      { value: "vocab", label: "단어", color: "var(--cat-vocab)" },
+      { value: "grammar", label: "문법", color: "var(--cat-grammar)" },
+      { value: "listening", label: "듣기", color: "var(--cat-listening)" },
+      { value: "reading", label: "리딩", color: "var(--cat-reading)" },
+      { value: "speaking", label: "스피킹", color: "var(--cat-speaking)" },
+      { value: "writing", label: "라이팅", color: "var(--cat-writing)" },
+      { value: "etc", label: "기타", color: "var(--cat-etc)" },
     ];
 
     function categoryInfo(value) {
@@ -577,7 +787,7 @@
 
     function renderStats() {
       const { current, longest } = computeStreaks();
-      document.getElementById("statStreak").innerHTML = `${current}<span class="unit">일</span>`;
+      document.getElementById("statStreak").innerHTML = `${current}<span class="unit">일째</span>`;
       document.getElementById("statLongest").innerHTML = `${longest}<span class="unit">일</span>`;
 
       const now = new Date();
@@ -682,6 +892,7 @@
       const cat = categoryInfo(entry.category);
       const item = document.createElement("div");
       item.className = "log-item";
+      item.style.setProperty("--cat-color", cat.color);
 
       const head = document.createElement("div");
       head.className = "log-item-head";
@@ -696,7 +907,7 @@
 
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.style.background = `color-mix(in srgb, ${cat.color} 22%, transparent)`;
+      badge.style.background = `color-mix(in srgb, ${cat.color} 24%, transparent)`;
       badge.style.color = cat.color;
       badge.textContent = cat.label;
       meta.appendChild(badge);
