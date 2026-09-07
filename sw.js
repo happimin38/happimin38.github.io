@@ -15,6 +15,7 @@ const ASSETS = [
   "./ledger.html",
   "./dashboard.html",
   "./portfolio.html",
+  "./english.html",
   "./money-input.js",
   "./manifest.json",
   "./icons/icon-192.png",
