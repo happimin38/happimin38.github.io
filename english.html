@@ -879,6 +879,7 @@
 
         cell.addEventListener("click", () => {
           selectedKey = key;
+          fDate.value = key;
           renderCalendar();
           renderDayPanel();
         });
@@ -1145,6 +1146,7 @@
     document.getElementById("gotoTodayBtn").addEventListener("click", () => {
       viewDate = startOfDay(new Date());
       selectedKey = todayKey();
+      fDate.value = selectedKey;
       renderCalendar();
       renderDayPanel();
     });
