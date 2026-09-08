@@ -587,9 +587,11 @@
     </footer>
   </div>
 
+  <script src="asset-groups.js"></script>
   <script src="money-input.js"></script>
   <script>
     const STORAGE_KEY = "salaryAppData_v1";
+    const { genId } = AssetGroups;
 
     function loadData() {
       try {
@@ -609,6 +611,11 @@
     }
 
     let data = loadData();
+
+    // The groups the savings entries point at are created here as well as on
+    // the dashboard, so whichever page is opened first they exist.
+    if (AssetGroups.ensure(data)) saveData(data);
+
     let currentDate = new Date();
     currentDate.setDate(1);
 
@@ -627,10 +634,6 @@
 
     function formatWon(n) {
       return Math.round(n).toLocaleString("ko-KR") + "원";
-    }
-
-    function genId() {
-      return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     }
 
     // The dashboard's groups are the destinations savings can be paid into.
