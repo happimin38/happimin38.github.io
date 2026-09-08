@@ -394,6 +394,44 @@
 
     .expense-del:hover { color: var(--danger); }
 
+    .expense-edit {
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+    }
+
+    .expense-edit:hover { color: var(--accent-3); }
+
+    .expense-item.editing {
+      border-color: var(--accent);
+      background: rgba(249, 115, 22, 0.12);
+    }
+
+    .form-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .btn-cancel {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-main);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .btn-cancel:hover { border-color: var(--danger); color: var(--danger); }
+    .btn-cancel[hidden] { display: none; }
+
     .empty-state {
       font-size: 12px;
       color: var(--text-muted);
@@ -521,7 +559,10 @@
 
     <div class="main-grid">
       <section class="panel">
-        <div class="panel-title">지출 추가</div>
+        <div class="form-head">
+          <div class="panel-title" id="formTitle" style="margin-bottom:0">지출 추가</div>
+          <button class="btn-cancel" id="cancelEdit" type="button" hidden>수정 취소</button>
+        </div>
         <form class="expense-form" id="expenseForm">
           <select id="expenseCategory">
             <option value="식비">식비</option>
@@ -538,7 +579,7 @@
           <input type="text" inputmode="decimal" data-money id="expenseAmount" placeholder="금액" required />
           <input type="date" id="expenseDate" class="full" />
           <input type="text" id="expenseMemo" class="full" placeholder="메모 (선택)" maxlength="40" />
-          <button type="submit" class="btn-add">+ 지출 추가</button>
+          <button type="submit" class="btn-add" id="submitBtn">+ 지출 추가</button>
         </form>
 
         <div class="panel-title" style="margin-top: 18px;">지출 내역</div>
@@ -600,6 +641,9 @@
 
     // The calendar day being inspected; null shows the whole month.
     let selectedDay = null;
+
+    // The entry loaded into the form for editing; null means the form adds.
+    let editingId = null;
 
     function monthKey(d) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -810,12 +854,13 @@
           const rows = items
             .map(
               (e) => `
-              <div class="expense-item">
+              <div class="expense-item${e.id === editingId ? " editing" : ""}">
                 <span class="expense-cat">${escapeHtml(e.category || "기타")}</span>
                 <div class="expense-main">
                   <div class="expense-amount">${formatWon(e.amount)}</div>
                   ${e.memo ? `<div class="expense-memo">${escapeHtml(e.memo)}</div>` : ""}
                 </div>
+                <button class="expense-edit" data-id="${e.id}" aria-label="수정">✎</button>
                 <button class="expense-del" data-id="${e.id}" aria-label="삭제">✕</button>
               </div>
             `
@@ -894,7 +939,15 @@
       renderCalendar(key);
       renderList(key);
       renderBreakdown(key);
+      renderFormMode();
       prefillDate(key);
+    }
+
+    function renderFormMode() {
+      const editing = Boolean(editingId);
+      document.getElementById("formTitle").textContent = editing ? "지출 수정" : "지출 추가";
+      document.getElementById("submitBtn").textContent = editing ? "수정 저장" : "+ 지출 추가";
+      document.getElementById("cancelEdit").hidden = !editing;
     }
 
     // Default the date to today while viewing the current month, otherwise the
@@ -916,12 +969,16 @@
     document.getElementById("prevMonth").addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
       selectedDay = null;
+      editingId = null;
+      document.getElementById("expenseForm").reset();
       render();
     });
 
     document.getElementById("nextMonth").addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
       selectedDay = null;
+      editingId = null;
+      document.getElementById("expenseForm").reset();
       render();
     });
 
@@ -954,8 +1011,33 @@
       // A date outside the month on screen belongs to the month it names;
       // follow it so the entry is filed where it will be looked for.
       const targetKey = date.slice(0, 7);
-      const month = ensureMonth(targetKey);
-      month.expenses.push({ id: genId(), category, amount, date, memo });
+
+      if (editingId) {
+        // Editing the date can move an entry to another month, so it is
+        // removed from wherever it sat before being filed again.
+        let original = null;
+        Object.keys(data.months).forEach((k) => {
+          const m = data.months[k];
+          if (!Array.isArray(m.expenses)) return;
+          const found = m.expenses.find((x) => x.id === editingId);
+          if (found) {
+            original = found;
+            m.expenses = m.expenses.filter((x) => x.id !== editingId);
+          }
+        });
+        ensureMonth(targetKey).expenses.push({
+          id: editingId,
+          category,
+          amount,
+          date,
+          memo,
+          ...(original && original.createdAt ? { createdAt: original.createdAt } : {}),
+        });
+        editingId = null;
+      } else {
+        ensureMonth(targetKey).expenses.push({ id: genId(), category, amount, date, memo });
+      }
+
       saveData(data);
       e.target.reset();
 
@@ -966,11 +1048,43 @@
       render();
     });
 
+    function startEditing(id) {
+      const key = monthKey(currentDate);
+      const entry = expensesOf(key).find((x) => x.id === id);
+      if (!entry) return;
+      editingId = id;
+      document.getElementById("expenseCategory").value = entry.category || "기타";
+      Money.write(document.getElementById("expenseAmount"), entry.amount);
+      document.getElementById("expenseDate").value = entry.date || `${key}-01`;
+      document.getElementById("expenseMemo").value = entry.memo || "";
+      render();
+      document.getElementById("expenseAmount").focus();
+    }
+
+    function stopEditing() {
+      editingId = null;
+      document.getElementById("expenseForm").reset();
+      render();
+    }
+
+    document.getElementById("cancelEdit").addEventListener("click", stopEditing);
+
     document.getElementById("expenseList").addEventListener("click", (e) => {
+      const editBtn = e.target.closest(".expense-edit");
+      if (editBtn) {
+        startEditing(editBtn.dataset.id);
+        return;
+      }
+
       const btn = e.target.closest(".expense-del");
       if (!btn) return;
       const key = monthKey(currentDate);
       const month = ensureMonth(key);
+      // Deleting the entry being edited leaves the form with nothing to save.
+      if (editingId === btn.dataset.id) {
+        editingId = null;
+        document.getElementById("expenseForm").reset();
+      }
       month.expenses = month.expenses.filter((exp) => exp.id !== btn.dataset.id);
       saveData(data);
       render();
