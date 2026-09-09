@@ -485,7 +485,16 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      cursor: pointer;
+      border-radius: 0 8px 8px 0;
+      transition: background 0.12s ease;
     }
+
+    .log-item:hover {
+      background: color-mix(in srgb, var(--cat-color, var(--hairline)) 8%, transparent);
+    }
+
+    .log-item:hover .log-edit-hint { opacity: 1; }
 
     .log-item::before {
       content: "";
@@ -523,7 +532,12 @@
       white-space: nowrap;
     }
 
-    .log-minutes { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+    .log-edit-hint {
+      font-size: 11px;
+      color: var(--text-faint);
+      opacity: 0;
+      transition: opacity 0.12s ease;
+    }
 
     .log-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text); }
 
@@ -683,20 +697,16 @@
             <select id="fCategory"></select>
           </div>
           <div class="field full">
-            <label for="fTitle">한 줄 요약</label>
-            <input type="text" id="fTitle" placeholder="예) 가정법 과거완료 정리" required />
+            <label for="fTitle">한 줄 요약 (선택)</label>
+            <input type="text" id="fTitle" placeholder="예) 가정법 과거완료 정리" />
           </div>
-          <div class="field">
+          <div class="field full">
             <label for="fLink">유튜브 링크 (선택)</label>
             <input type="url" id="fLink" placeholder="https://youtube.com/watch?v=..." />
           </div>
-          <div class="field">
-            <label for="fMinutes">학습 시간(분, 선택)</label>
-            <input type="number" id="fMinutes" min="0" placeholder="예) 30" />
-          </div>
           <div class="field full">
-            <label for="fContent">상세 내용 (선택)</label>
-            <textarea id="fContent" placeholder="예) 문장 5개 직접 만들어봄. if I had known, I would have gone. 등"></textarea>
+            <label for="fContent">오늘 배운 내용</label>
+            <textarea id="fContent" placeholder="예) 문장 5개 직접 만들어봄. if I had known, I would have gone. 등" required></textarea>
           </div>
         </div>
         <div class="form-actions">
@@ -939,24 +949,15 @@
       badge.textContent = cat.label;
       meta.appendChild(badge);
 
-      if (entry.minutes) {
-        const min = document.createElement("span");
-        min.className = "log-minutes";
-        min.textContent = `${entry.minutes}분`;
-        meta.appendChild(min);
-      }
-
       head.appendChild(meta);
 
       const actions = document.createElement("div");
       actions.className = "log-actions";
 
-      const editBtn = document.createElement("button");
-      editBtn.type = "button";
-      editBtn.className = "icon-btn";
-      editBtn.textContent = "수정";
-      editBtn.addEventListener("click", () => startEdit(entry.id));
-      actions.appendChild(editBtn);
+      const editHint = document.createElement("span");
+      editHint.className = "log-edit-hint";
+      editHint.textContent = "클릭해서 수정";
+      actions.appendChild(editHint);
 
       const delBtn = document.createElement("button");
       delBtn.type = "button";
@@ -993,6 +994,11 @@
         item.appendChild(link);
       }
 
+      item.addEventListener("click", (e) => {
+        if (e.target.closest("button, a")) return;
+        startEdit(entry.id);
+      });
+
       return item;
     }
 
@@ -1026,7 +1032,6 @@
     const fTitle = document.getElementById("fTitle");
     const fLink = document.getElementById("fLink");
     const fContent = document.getElementById("fContent");
-    const fMinutes = document.getElementById("fMinutes");
     const submitBtn = document.getElementById("submitBtn");
     const cancelEditBtn = document.getElementById("cancelEditBtn");
     const formTitle = document.getElementById("formTitle");
@@ -1057,7 +1062,6 @@
       fTitle.value = entry.title || "";
       fLink.value = entry.link || "";
       fContent.value = entry.content || "";
-      fMinutes.value = entry.minutes || "";
       submitBtn.textContent = "수정 저장";
       formTitle.textContent = "기록 수정하기";
       cancelEditBtn.hidden = false;
@@ -1077,7 +1081,7 @@
       const title = fTitle.value.trim();
       const link = fLink.value.trim();
       const content = fContent.value.trim();
-      if (!title) return;
+      if (!content) return;
 
       if (editingId) {
         const entry = data.entries.find((en) => en.id === editingId);
@@ -1087,7 +1091,6 @@
           entry.title = title;
           entry.link = link;
           entry.content = content;
-          entry.minutes = Number(fMinutes.value) || 0;
         }
       } else {
         data.entries.push({
@@ -1097,7 +1100,6 @@
           title,
           link,
           content,
-          minutes: Number(fMinutes.value) || 0,
         });
       }
 
@@ -1113,7 +1115,7 @@
     document.getElementById("addHereBtn").addEventListener("click", () => {
       resetForm();
       fDate.value = selectedKey;
-      fTitle.focus();
+      fContent.focus();
     });
 
     document.getElementById("dayDoneCheck").addEventListener("change", (e) => {
