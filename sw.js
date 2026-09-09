@@ -6,7 +6,7 @@
  * connection. Records live in localStorage, which the cache never touches,
  * so nothing entered can be lost by clearing it.
  */
-const CACHE = "money-note-v2";
+const CACHE = "money-note-v3";
 
 const ASSETS = [
   "./",
@@ -19,8 +19,11 @@ const ASSETS = [
   "./money-input.js",
   "./asset-groups.js",
   "./manifest.json",
+  "./manifest-english.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/icon-english-192.png",
+  "./icons/icon-english-512.png",
 ];
 
 self.addEventListener("install", (event) => {

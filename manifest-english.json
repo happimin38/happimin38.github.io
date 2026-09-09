@@ -1,0 +1,17 @@
+{
+  "name": "영어 습관 트래커 · 학습 저널",
+  "short_name": "영어 습관 트래커",
+  "description": "매일 배운 영어를 기록하고 학습 습관을 캘린더로 관리하는 개인용 학습 저널",
+  "lang": "ko",
+  "start_url": "./english.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2a1410",
+  "theme_color": "#2a1410",
+  "icons": [
+    { "src": "icons/icon-english-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-english-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-english-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
