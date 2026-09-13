@@ -345,29 +345,60 @@
       <h3><span>🍻 다같이 만드는 회식 맛집</span><span id="crowdCount"></span></h3>
 
       <div id="crowdSetup" class="setup" style="padding:0; border:none; background:none; margin-bottom:0;">
-        <p>팀원들이 구글 폼으로 등록한 회식 장소를 여기 모아 보여줘요. 처음 한 번만 설정하면 돼요.</p>
+        <p>누구나 이 페이지에서 회식 장소를 바로 등록하고 볼 수 있게, 무료 파이어베이스(Firestore) DB를 한 번만 연결하면 돼요.</p>
         <ol>
-          <li><a href="https://forms.google.com" target="_blank" rel="noopener" style="color:var(--accent-3);text-decoration:underline;">구글 폼</a>에서 새 양식을 만들고, 다음 질문을 추가하세요: <code>가게 이름</code>(단답형), <code>카카오맵 링크</code>(단답형, 선택), <code>인원</code>(객관식: <code>10인 미만</code> / <code>10~20인</code> / <code>20인 이상</code>), <code>예산</code>(객관식: <code>2만원대</code> / <code>3만원대</code> / <code>4만원 이상</code>), <code>룸 유무</code>(객관식: <code>있음</code> / <code>없음</code>), <code>한줄 후기</code>(장문형, 선택), <code>작성자</code>(단답형, 선택). 괄호 안 문구는 필터가 인식하는 값이라 그대로 써주세요.</li>
-          <li>폼 편집 화면의 "응답" 탭 → 초록 스프레드시트 아이콘 클릭 → 응답이 쌓일 시트를 새로 만드세요.</li>
-          <li>그 스프레드시트에서 <strong>파일 → 공유 → 웹에 게시</strong> → 형식을 <strong>쉼표로 구분된 값(.csv)</strong>으로 선택 → 게시 → 나오는 링크를 복사하세요.</li>
-          <li>폼 자체의 "보내기" 버튼에서 폼 링크도 복사하세요 (팀원들이 등록할 때 쓸 링크예요, 선택사항).</li>
+          <li><a href="https://console.firebase.google.com" target="_blank" rel="noopener" style="color:var(--accent-3);text-decoration:underline;">파이어베이스 콘솔</a>에서 프로젝트를 하나 만드세요 (이름은 아무거나, 예: 과천 회식 맛집).</li>
+          <li>왼쪽 메뉴 <strong>Firestore Database</strong> → 데이터베이스 만들기 → 테스트 모드로 시작 → 가까운 리전(asia-northeast3 등) 선택.</li>
+          <li>Firestore <strong>규칙(Rules)</strong> 탭에서 아래처럼 바꾸고 게시하세요 (로그인 없이 다같이 쓰는 내부용이라 읽기/쓰기를 열어둬요 — URL을 아는 누구나 쓰고 지울 수 있다는 뜻이니 참고하세요):
+            <pre style="background:rgba(2,6,23,0.6); padding:10px 12px; border-radius:8px; font-size:11px; overflow-x:auto; margin-top:6px;">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /gwacheonRestaurants/{doc} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+          </li>
+          <li>프로젝트 설정(⚙️ 톱니바퀴) → 일반 → "내 앱" → 웹 앱 추가(&lt;/&gt; 아이콘) → 앱 등록 → 나오는 <code>firebaseConfig</code> 객체(<code>{`{ apiKey: ...`}</code> 부분) 전체를 복사하세요.</li>
+          <li>아래 칸에 그대로 붙여넣고 저장하세요. 이 값은 깃허브에 올라가지 않고 이 브라우저에만 저장돼요.</li>
         </ol>
         <div class="key-row">
-          <input type="text" id="crowdCsvInput" placeholder="구글 시트 CSV 공개 링크 (필수)" autocomplete="off" spellcheck="false" />
+          <textarea id="firebaseConfigInput" rows="5" placeholder='{ apiKey: "...", authDomain: "...", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." }' style="flex:1; min-width:220px; padding:11px 14px; border-radius:12px; border:1px solid var(--border-subtle); background:rgba(2,6,23,0.6); color:var(--text-main); font-size:12px; font-family:monospace; resize:vertical;"></textarea>
         </div>
         <div class="key-row" style="margin-top:8px;">
-          <input type="text" id="crowdFormInput" placeholder="구글 폼 링크 (등록 버튼용, 선택)" autocomplete="off" spellcheck="false" />
-          <button class="btn-primary" id="crowdSaveBtn" type="button">저장하고 불러오기</button>
+          <button class="btn-primary" id="firebaseSaveBtn" type="button">저장하고 연결하기</button>
         </div>
-        <div class="setup-error" id="crowdError">불러오지 못했어요. CSV 링크가 맞는지, 시트가 "웹에 게시" 상태인지 확인해 주세요.</div>
+        <div class="setup-error" id="crowdError">설정을 읽지 못했어요. firebaseConfig 객체를 그대로 붙여넣었는지, Firestore 규칙을 게시했는지 확인해 주세요.</div>
       </div>
 
       <div id="crowdApp" hidden>
         <div class="crowd-actions">
-          <a class="btn-primary" id="crowdFormLink" href="#" target="_blank" rel="noopener" hidden>+ 새 장소 등록하기</a>
-          <button class="chip" id="crowdRefreshBtn" type="button">새로고침</button>
+          <button class="btn-primary" id="crowdAddToggleBtn" type="button">+ 새 장소 등록하기</button>
           <button class="chip" id="crowdSettingsBtn" type="button">설정 변경</button>
         </div>
+
+        <div id="crowdAddForm" class="setup" hidden>
+          <div class="key-row">
+            <input type="text" id="entryName" placeholder="가게 이름 (필수)" />
+          </div>
+          <div class="key-row" style="margin-top:8px;">
+            <input type="text" id="entryKakaoLink" placeholder="카카오맵 링크 (선택)" />
+          </div>
+          <div class="tag-row" style="margin-top:8px;">
+            <select id="entryCapacity" class="tag-select"></select>
+            <select id="entryBudget" class="tag-select"></select>
+            <select id="entryRoom" class="tag-select"></select>
+          </div>
+          <div class="key-row" style="margin-top:8px;">
+            <input type="text" id="entryReview" placeholder="한줄 후기 (선택)" />
+          </div>
+          <div class="key-row" style="margin-top:8px;">
+            <input type="text" id="entryAuthor" placeholder="이름 (선택)" />
+            <button class="btn-primary" id="entrySubmitBtn" type="button">등록</button>
+          </div>
+          <div class="setup-error" id="entryError">등록에 실패했어요. 잠시 후 다시 시도해 주세요.</div>
+        </div>
+
         <div class="fav-filters" id="crowdFilters">
           <select id="crowdFilterCapacity" class="tag-select"></select>
           <select id="crowdFilterBudget" class="tag-select"></select>
@@ -431,7 +462,8 @@
 
     <footer>
       맛집 검색은 카카오맵 API를 사용합니다. 리뷰·평점·룸 정보는 API로 제공되지 않아 "네이버 후기" 링크로 직접 확인하세요.<br />
-      저장한 맛집과 인원/예산/룸 태그는 이 브라우저에만 남아요.
+      "다같이 만드는 회식 맛집" 목록은 파이어베이스에 저장돼 모두에게 공유되고, 이 페이지 주소를 아는 누구나 추가·삭제할 수 있어요.<br />
+      개인 즐겨찾기와 인원/예산/룸 태그는 이 브라우저에만 남아요.
     </footer>
   </div>
 
@@ -779,81 +811,18 @@
       });
     }
 
-    /* ---------- Crowd-sourced 회식 맛집 (Google Form + published Sheet CSV) ---------- */
+    /* ---------- Crowd-sourced 회식 맛집 (Firestore — anyone can add) ---------- */
 
-    const CROWD_CSV_STORAGE = "crowdSheetCsvUrl_v1";
-    const CROWD_FORM_STORAGE = "crowdFormUrl_v1";
+    const FIREBASE_CONFIG_STORAGE = "firebaseConfig_v1";
+    const CROWD_COLLECTION = "gwacheonRestaurants";
+    const FIREBASE_SDK_VERSION = "10.13.2";
     const crowdFilter = { capacity: "", budget: "", room: "" };
     let crowdRows = [];
+    let firestoreDb = null;
+    let firestoreApi = null;
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-    }
-
-    // Minimal RFC4180-ish CSV parser (quoted fields, embedded commas/newlines/escaped quotes).
-    function parseCsv(text) {
-      const rows = [];
-      let row = [];
-      let field = "";
-      let inQuotes = false;
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (inQuotes) {
-          if (char === '"') {
-            if (text[i + 1] === '"') {
-              field += '"';
-              i++;
-            } else {
-              inQuotes = false;
-            }
-          } else {
-            field += char;
-          }
-        } else if (char === '"') {
-          inQuotes = true;
-        } else if (char === ",") {
-          row.push(field);
-          field = "";
-        } else if (char === "\n") {
-          row.push(field);
-          rows.push(row);
-          row = [];
-          field = "";
-        } else if (char !== "\r") {
-          field += char;
-        }
-      }
-      if (field.length || row.length) {
-        row.push(field);
-        rows.push(row);
-      }
-      return rows.filter((r) => r.some((c) => c.trim() !== ""));
-    }
-
-    function buildCrowdFieldIndex(headers) {
-      const find = (needle) => headers.findIndex((h) => h.includes(needle));
-      return {
-        name: find("가게"),
-        kakaoLink: find("카카오"),
-        capacity: find("인원"),
-        budget: find("예산"),
-        room: find("룸"),
-        review: find("후기"),
-        author: find("작성"),
-      };
-    }
-
-    function crowdRowToEntry(row, idx) {
-      const get = (i) => (i >= 0 && i < row.length ? row[i].trim() : "");
-      return {
-        name: get(idx.name),
-        kakaoLink: get(idx.kakaoLink),
-        capacity: get(idx.capacity),
-        budget: get(idx.budget),
-        room: get(idx.room),
-        review: get(idx.review),
-        author: get(idx.author),
-      };
     }
 
     function renderCrowdList() {
@@ -874,7 +843,7 @@
         : "";
 
       if (!crowdRows.length) {
-        listEl.innerHTML = '<div class="empty-hint">아직 등록된 곳이 없어요. "+ 새 장소 등록하기"로 팀원들과 함께 채워보세요.</div>';
+        listEl.innerHTML = '<div class="empty-hint">아직 등록된 곳이 없어요. "+ 새 장소 등록하기"로 직접 채워보세요.</div>';
         return;
       }
       if (!filtered.length) {
@@ -882,57 +851,32 @@
         return;
       }
 
-      listEl.innerHTML = filtered
-        .map((e) => {
-          const kakaoUrl = e.kakaoLink || `https://map.kakao.com/?q=${encodeURIComponent(e.name)}`;
-          const naverUrl = `https://search.naver.com/search.naver?where=post&query=${encodeURIComponent(e.name + " 후기")}`;
-          const tags = [e.capacity, e.budget, e.room ? "룸 " + e.room : ""].filter(Boolean).join(" · ");
-          return `
-            <div class="place-item" style="cursor:default;">
-              <div class="place-name">${escapeHtml(e.name)}</div>
-              ${tags ? `<div class="place-cat">${escapeHtml(tags)}</div>` : ""}
-              ${e.review ? `<div class="place-addr">${escapeHtml(e.review)}</div>` : ""}
-              <div class="place-meta">
-                <span>${e.author ? escapeHtml(e.author) + " 등록" : ""}</span>
-                <a class="naver-link" href="${kakaoUrl}" target="_blank" rel="noopener">카카오맵</a>
-                <a class="naver-link" href="${naverUrl}" target="_blank" rel="noopener">네이버 후기</a>
-              </div>
-            </div>
-          `;
-        })
-        .join("");
-    }
-
-    async function fetchCrowdRows() {
-      const csvUrl = localStorage.getItem(CROWD_CSV_STORAGE);
-      if (!csvUrl) return;
-      const listEl = document.getElementById("crowdList");
-      const errorEl = document.getElementById("crowdError");
-      errorEl.style.display = "none";
-      listEl.innerHTML = '<div class="empty-hint">불러오는 중...</div>';
-      try {
-        const res = await fetch(csvUrl, { cache: "no-store" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const text = await res.text();
-        const table = parseCsv(text);
-        if (!table.length) {
-          crowdRows = [];
-          renderCrowdList();
-          return;
-        }
-        const headers = table[0].map((h) => h.trim());
-        const idx = buildCrowdFieldIndex(headers);
-        crowdRows = table
-          .slice(1)
-          .map((row) => crowdRowToEntry(row, idx))
-          .filter((e) => e.name)
-          .reverse();
-        renderCrowdList();
-      } catch (e) {
-        console.error("회식 맛집 시트 불러오기 실패:", e);
-        listEl.innerHTML = "";
-        errorEl.style.display = "block";
-      }
+      listEl.innerHTML = "";
+      filtered.forEach((e) => {
+        const kakaoUrl = e.kakaoLink || `https://map.kakao.com/?q=${encodeURIComponent(e.name)}`;
+        const naverUrl = `https://search.naver.com/search.naver?where=post&query=${encodeURIComponent(e.name + " 후기")}`;
+        const tags = [e.capacity, e.budget, e.room ? "룸 " + e.room : ""].filter(Boolean).join(" · ");
+        const el = document.createElement("div");
+        el.className = "place-item";
+        el.style.cursor = "default";
+        el.innerHTML = `
+          <div class="place-name">${escapeHtml(e.name)}</div>
+          ${tags ? `<div class="place-cat">${escapeHtml(tags)}</div>` : ""}
+          ${e.review ? `<div class="place-addr">${escapeHtml(e.review)}</div>` : ""}
+          <div class="place-meta">
+            <span>${e.author ? escapeHtml(e.author) + " 등록" : ""}</span>
+            <a class="naver-link" href="${kakaoUrl}" target="_blank" rel="noopener">카카오맵</a>
+            <a class="naver-link" href="${naverUrl}" target="_blank" rel="noopener">네이버 후기</a>
+            <button class="fav-btn" title="삭제">🗑</button>
+          </div>
+        `;
+        el.querySelector(".fav-btn").addEventListener("click", () => {
+          if (confirm(`"${e.name}"을(를) 삭제할까요? 모두에게 보이는 목록에서 지워져요.`)) {
+            deleteCrowdEntry(e.id).catch((err) => console.error("회식 맛집 삭제 실패:", err));
+          }
+        });
+        listEl.appendChild(el);
+      });
     }
 
     function showCrowdSetup() {
@@ -943,16 +887,6 @@
     function showCrowdApp() {
       document.getElementById("crowdSetup").hidden = true;
       document.getElementById("crowdApp").hidden = false;
-    }
-
-    function applyCrowdFormLink(formUrl) {
-      const link = document.getElementById("crowdFormLink");
-      if (formUrl) {
-        link.href = formUrl;
-        link.hidden = false;
-      } else {
-        link.hidden = true;
-      }
     }
 
     function initCrowdFilters() {
@@ -971,33 +905,140 @@
       });
     }
 
-    function initCrowd() {
-      const csv = localStorage.getItem(CROWD_CSV_STORAGE) || "";
-      const form = localStorage.getItem(CROWD_FORM_STORAGE) || "";
-      document.getElementById("crowdCsvInput").value = csv;
-      document.getElementById("crowdFormInput").value = form;
-
-      document.getElementById("crowdSaveBtn").addEventListener("click", () => {
-        const newCsv = document.getElementById("crowdCsvInput").value.trim();
-        const newForm = document.getElementById("crowdFormInput").value.trim();
-        if (!newCsv) return;
-        localStorage.setItem(CROWD_CSV_STORAGE, newCsv);
-        if (newForm) localStorage.setItem(CROWD_FORM_STORAGE, newForm);
-        else localStorage.removeItem(CROWD_FORM_STORAGE);
-        applyCrowdFormLink(newForm);
-        showCrowdApp();
-        fetchCrowdRows();
+    function initEntryForm() {
+      const map = [
+        ["entryCapacity", CAPACITY_OPTIONS],
+        ["entryBudget", BUDGET_OPTIONS],
+        ["entryRoom", ROOM_OPTIONS],
+      ];
+      map.forEach(([elId, options]) => {
+        document.getElementById(elId).innerHTML = options
+          .map(([value, label]) => `<option value="${value}">${label}</option>`)
+          .join("");
       });
 
-      document.getElementById("crowdRefreshBtn").addEventListener("click", fetchCrowdRows);
+      document.getElementById("crowdAddToggleBtn").addEventListener("click", () => {
+        const form = document.getElementById("crowdAddForm");
+        form.hidden = !form.hidden;
+      });
+
+      document.getElementById("entrySubmitBtn").addEventListener("click", async () => {
+        const name = document.getElementById("entryName").value.trim();
+        if (!name) return;
+        const entry = {
+          name,
+          kakaoLink: document.getElementById("entryKakaoLink").value.trim(),
+          capacity: document.getElementById("entryCapacity").value,
+          budget: document.getElementById("entryBudget").value,
+          room: document.getElementById("entryRoom").value,
+          review: document.getElementById("entryReview").value.trim(),
+          author: document.getElementById("entryAuthor").value.trim(),
+        };
+        const btn = document.getElementById("entrySubmitBtn");
+        const entryError = document.getElementById("entryError");
+        entryError.style.display = "none";
+        btn.disabled = true;
+        try {
+          await addCrowdEntry(entry);
+          ["entryName", "entryKakaoLink", "entryReview", "entryAuthor"].forEach(
+            (id) => (document.getElementById(id).value = "")
+          );
+          document.getElementById("entryCapacity").value = "";
+          document.getElementById("entryBudget").value = "";
+          document.getElementById("entryRoom").value = "";
+          document.getElementById("crowdAddForm").hidden = true;
+        } catch (e) {
+          console.error("회식 맛집 등록 실패:", e);
+          entryError.style.display = "block";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    async function loadFirebase(config) {
+      const appMod = await import(
+        `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`
+      );
+      const fsMod = await import(
+        `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`
+      );
+      const app = appMod.initializeApp(config);
+      firestoreApi = fsMod;
+      firestoreDb = fsMod.getFirestore(app);
+    }
+
+    function subscribeCrowdRows() {
+      const { collection, query, orderBy, onSnapshot } = firestoreApi;
+      const q = query(collection(firestoreDb, CROWD_COLLECTION), orderBy("createdAt", "desc"));
+      onSnapshot(
+        q,
+        (snap) => {
+          crowdRows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          renderCrowdList();
+        },
+        (err) => {
+          console.error("회식 맛집 실시간 구독 실패:", err);
+          document.getElementById("crowdList").innerHTML =
+            '<div class="empty-hint">불러오지 못했어요. Firestore 규칙을 확인해 주세요.</div>';
+        }
+      );
+    }
+
+    async function addCrowdEntry(entry) {
+      const { collection, addDoc, serverTimestamp } = firestoreApi;
+      await addDoc(collection(firestoreDb, CROWD_COLLECTION), { ...entry, createdAt: serverTimestamp() });
+    }
+
+    async function deleteCrowdEntry(id) {
+      const { doc, deleteDoc } = firestoreApi;
+      await deleteDoc(doc(firestoreDb, CROWD_COLLECTION, id));
+    }
+
+    async function startCrowd(config) {
+      document.getElementById("crowdError").style.display = "none";
+      try {
+        await loadFirebase(config);
+        showCrowdApp();
+        subscribeCrowdRows();
+      } catch (e) {
+        console.error("파이어베이스 연결 실패:", e);
+        document.getElementById("crowdError").style.display = "block";
+        showCrowdSetup();
+      }
+    }
+
+    function initCrowd() {
+      let saved = null;
+      try {
+        const raw = localStorage.getItem(FIREBASE_CONFIG_STORAGE);
+        saved = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        saved = null;
+      }
+      document.getElementById("firebaseConfigInput").value = saved ? JSON.stringify(saved, null, 2) : "";
+
+      document.getElementById("firebaseSaveBtn").addEventListener("click", () => {
+        const text = document.getElementById("firebaseConfigInput").value.trim();
+        if (!text) return;
+        try {
+          const config = new Function("return (" + text + ")")();
+          if (!config || !config.apiKey || !config.projectId) throw new Error("설정 값이 부족해요");
+          localStorage.setItem(FIREBASE_CONFIG_STORAGE, JSON.stringify(config));
+          startCrowd(config);
+        } catch (e) {
+          console.error("파이어베이스 설정 파싱 실패:", e);
+          document.getElementById("crowdError").style.display = "block";
+        }
+      });
+
       document.getElementById("crowdSettingsBtn").addEventListener("click", showCrowdSetup);
 
+      initEntryForm();
       initCrowdFilters();
 
-      if (csv) {
-        applyCrowdFormLink(form);
-        showCrowdApp();
-        fetchCrowdRows();
+      if (saved) {
+        startCrowd(saved);
       } else {
         showCrowdSetup();
       }
