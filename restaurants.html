@@ -272,24 +272,8 @@
     }
 
     .cond-title { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
-    .cond-hint { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
-    .cond-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-    .cond-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-    .btn-naver {
-      padding: 11px 18px;
-      border-radius: 12px;
-      border: 1px solid var(--accent-3);
-      background: rgba(56, 189, 248, 0.14);
-      color: #bae6fd;
-      font-size: 13px;
-      font-family: inherit;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .btn-naver:hover { background: rgba(56, 189, 248, 0.24); }
+    .cond-hint { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+    .cond-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
     .fav-btn {
       border: none;
@@ -384,17 +368,12 @@
 
     <div id="appArea" hidden>
       <div class="cond-panel" id="condPanel">
-        <div class="cond-title">회식 조건으로 찾기</div>
+        <div class="cond-title">회식 조건 (선택 — 네이버 후기 링크에 반영돼요)</div>
         <div class="cond-row">
           <select id="condCapacity" class="tag-select"></select>
           <select id="condBudget" class="tag-select"></select>
           <select id="condRoom" class="tag-select"></select>
         </div>
-        <div class="cond-actions">
-          <button class="btn-primary" id="condSearchKakaoBtn" type="button">카카오맵에서 검색</button>
-          <button class="btn-naver" id="condSearchNaverBtn" type="button">네이버 블로그 후기 검색</button>
-        </div>
-        <div class="cond-hint">카카오맵 검색은 키워드(왼쪽 검색창/카테고리)만으로 찾고, 인원·예산·룸 조건은 네이버 후기 검색에만 반영돼요. 조건에 맞는 곳인지는 네이버 후기로 확인해 주세요.</div>
       </div>
 
       <div class="search-bar">
@@ -410,6 +389,11 @@
         <button class="chip" data-kw="분식">분식</button>
         <button class="chip" data-kw="카페">카페</button>
         <button class="chip" data-kw="술집">술집</button>
+      </div>
+      <div class="cond-hint">
+        카카오맵 검색은 위 키워드/카테고리만 봐요 (조건 단어를 섞으면 결과가 0개가 돼요).
+        인원·예산·룸까지 반영된 후기는 →
+        <a class="naver-link" id="naverReviewLink" href="#" target="_blank" rel="noopener">네이버에서 조건으로 찾기</a>
       </div>
 
       <div class="map-layout">
@@ -784,6 +768,13 @@
       return terms;
     }
 
+    function updateNaverLink() {
+      const base = currentChipKeyword() || document.getElementById("searchInput").value.trim() || "회식";
+      const query = `과천 ${[base, ...buildConditionTerms()].join(" ")} 후기`;
+      document.getElementById("naverReviewLink").href =
+        `https://search.naver.com/search.naver?where=post&query=${encodeURIComponent(query)}`;
+    }
+
     function initCondPanel() {
       const map = [
         ["condCapacity", COND_CAPACITY_OPTIONS],
@@ -793,25 +784,9 @@
       map.forEach(([elId, options]) => {
         const sel = document.getElementById(elId);
         sel.innerHTML = options.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+        sel.addEventListener("change", updateNaverLink);
       });
-
-      document.getElementById("condSearchKakaoBtn").addEventListener("click", () => {
-        // Kakao's keyword search needs every term to match, so condition
-        // words (which never appear in a place name) would just zero out
-        // the results — only the base keyword goes to Kakao.
-        const base = currentChipKeyword() || document.getElementById("searchInput").value.trim() || "회식";
-        searchPlaces(base);
-      });
-
-      document.getElementById("condSearchNaverBtn").addEventListener("click", () => {
-        const base = currentChipKeyword() || document.getElementById("searchInput").value.trim() || "회식";
-        const query = `과천 ${[base, ...buildConditionTerms()].join(" ")} 후기`;
-        window.open(
-          `https://search.naver.com/search.naver?where=post&query=${encodeURIComponent(query)}`,
-          "_blank",
-          "noopener"
-        );
-      });
+      updateNaverLink();
     }
 
     function initFavFilters() {
@@ -855,11 +830,13 @@
       document.getElementById("searchBtn").addEventListener("click", () => {
         setActiveChip(null);
         searchPlaces(document.getElementById("searchInput").value);
+        updateNaverLink();
       });
       document.getElementById("searchInput").addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           setActiveChip(null);
           searchPlaces(document.getElementById("searchInput").value);
+          updateNaverLink();
         }
       });
 
@@ -868,6 +845,7 @@
           setActiveChip(chip.dataset.kw);
           document.getElementById("searchInput").value = "";
           searchPlaces(chip.dataset.kw);
+          updateNaverLink();
         });
       });
 
