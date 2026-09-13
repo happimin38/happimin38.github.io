@@ -624,6 +624,7 @@
       )}&libraries=services&autoload=false`;
       script.onload = () => {
         if (typeof kakao === "undefined" || !kakao.maps) {
+          console.error("카카오맵 SDK 로드 실패: kakao.maps 객체가 없습니다.");
           showSetup(true);
           return;
         }
@@ -632,11 +633,15 @@
             showApp();
             initApp();
           } catch (e) {
+            console.error("카카오맵 초기화 중 에러:", e);
             showSetup(true);
           }
         });
       };
-      script.onerror = () => showSetup(true);
+      script.onerror = (e) => {
+        console.error("카카오맵 SDK 스크립트 로드 실패 (도메인 미등록/네트워크 문제 가능):", e, script.src);
+        showSetup(true);
+      };
       document.head.appendChild(script);
     }
 
