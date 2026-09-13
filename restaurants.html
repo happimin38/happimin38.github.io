@@ -116,6 +116,7 @@
     .key-row input:focus { outline: none; border-color: var(--accent-3); }
 
     .btn-primary {
+      display: inline-block;
       padding: 11px 18px;
       border-radius: 12px;
       border: 1px solid var(--accent-2);
@@ -301,6 +302,8 @@
     .pager button:hover:not(:disabled) { border-color: var(--accent-3); color: var(--accent-3); }
     .pager button:disabled { opacity: 0.35; cursor: default; }
 
+    .crowd-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+
     footer {
       margin-top: 24px;
       font-size: 11px;
@@ -337,6 +340,42 @@
         <button type="button" id="settingsBtn">API 키 설정</button>
       </div>
     </header>
+
+    <section class="panel" style="max-height:none; margin-bottom:20px;">
+      <h3><span>🍻 다같이 만드는 회식 맛집</span><span id="crowdCount"></span></h3>
+
+      <div id="crowdSetup" class="setup" style="padding:0; border:none; background:none; margin-bottom:0;">
+        <p>팀원들이 구글 폼으로 등록한 회식 장소를 여기 모아 보여줘요. 처음 한 번만 설정하면 돼요.</p>
+        <ol>
+          <li><a href="https://forms.google.com" target="_blank" rel="noopener" style="color:var(--accent-3);text-decoration:underline;">구글 폼</a>에서 새 양식을 만들고, 다음 질문을 추가하세요: <code>가게 이름</code>(단답형), <code>카카오맵 링크</code>(단답형, 선택), <code>인원</code>(객관식: <code>10인 미만</code> / <code>10~20인</code> / <code>20인 이상</code>), <code>예산</code>(객관식: <code>2만원대</code> / <code>3만원대</code> / <code>4만원 이상</code>), <code>룸 유무</code>(객관식: <code>있음</code> / <code>없음</code>), <code>한줄 후기</code>(장문형, 선택), <code>작성자</code>(단답형, 선택). 괄호 안 문구는 필터가 인식하는 값이라 그대로 써주세요.</li>
+          <li>폼 편집 화면의 "응답" 탭 → 초록 스프레드시트 아이콘 클릭 → 응답이 쌓일 시트를 새로 만드세요.</li>
+          <li>그 스프레드시트에서 <strong>파일 → 공유 → 웹에 게시</strong> → 형식을 <strong>쉼표로 구분된 값(.csv)</strong>으로 선택 → 게시 → 나오는 링크를 복사하세요.</li>
+          <li>폼 자체의 "보내기" 버튼에서 폼 링크도 복사하세요 (팀원들이 등록할 때 쓸 링크예요, 선택사항).</li>
+        </ol>
+        <div class="key-row">
+          <input type="text" id="crowdCsvInput" placeholder="구글 시트 CSV 공개 링크 (필수)" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="key-row" style="margin-top:8px;">
+          <input type="text" id="crowdFormInput" placeholder="구글 폼 링크 (등록 버튼용, 선택)" autocomplete="off" spellcheck="false" />
+          <button class="btn-primary" id="crowdSaveBtn" type="button">저장하고 불러오기</button>
+        </div>
+        <div class="setup-error" id="crowdError">불러오지 못했어요. CSV 링크가 맞는지, 시트가 "웹에 게시" 상태인지 확인해 주세요.</div>
+      </div>
+
+      <div id="crowdApp" hidden>
+        <div class="crowd-actions">
+          <a class="btn-primary" id="crowdFormLink" href="#" target="_blank" rel="noopener" hidden>+ 새 장소 등록하기</a>
+          <button class="chip" id="crowdRefreshBtn" type="button">새로고침</button>
+          <button class="chip" id="crowdSettingsBtn" type="button">설정 변경</button>
+        </div>
+        <div class="fav-filters" id="crowdFilters">
+          <select id="crowdFilterCapacity" class="tag-select"></select>
+          <select id="crowdFilterBudget" class="tag-select"></select>
+          <select id="crowdFilterRoom" class="tag-select"></select>
+        </div>
+        <div id="crowdList"></div>
+      </div>
+    </section>
 
     <section class="setup" id="setupPanel">
       <h2>카카오맵 JavaScript 키가 필요해요</h2>
@@ -740,6 +779,230 @@
       });
     }
 
+    /* ---------- Crowd-sourced 회식 맛집 (Google Form + published Sheet CSV) ---------- */
+
+    const CROWD_CSV_STORAGE = "crowdSheetCsvUrl_v1";
+    const CROWD_FORM_STORAGE = "crowdFormUrl_v1";
+    const crowdFilter = { capacity: "", budget: "", room: "" };
+    let crowdRows = [];
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // Minimal RFC4180-ish CSV parser (quoted fields, embedded commas/newlines/escaped quotes).
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (inQuotes) {
+          if (char === '"') {
+            if (text[i + 1] === '"') {
+              field += '"';
+              i++;
+            } else {
+              inQuotes = false;
+            }
+          } else {
+            field += char;
+          }
+        } else if (char === '"') {
+          inQuotes = true;
+        } else if (char === ",") {
+          row.push(field);
+          field = "";
+        } else if (char === "\n") {
+          row.push(field);
+          rows.push(row);
+          row = [];
+          field = "";
+        } else if (char !== "\r") {
+          field += char;
+        }
+      }
+      if (field.length || row.length) {
+        row.push(field);
+        rows.push(row);
+      }
+      return rows.filter((r) => r.some((c) => c.trim() !== ""));
+    }
+
+    function buildCrowdFieldIndex(headers) {
+      const find = (needle) => headers.findIndex((h) => h.includes(needle));
+      return {
+        name: find("가게"),
+        kakaoLink: find("카카오"),
+        capacity: find("인원"),
+        budget: find("예산"),
+        room: find("룸"),
+        review: find("후기"),
+        author: find("작성"),
+      };
+    }
+
+    function crowdRowToEntry(row, idx) {
+      const get = (i) => (i >= 0 && i < row.length ? row[i].trim() : "");
+      return {
+        name: get(idx.name),
+        kakaoLink: get(idx.kakaoLink),
+        capacity: get(idx.capacity),
+        budget: get(idx.budget),
+        room: get(idx.room),
+        review: get(idx.review),
+        author: get(idx.author),
+      };
+    }
+
+    function renderCrowdList() {
+      const listEl = document.getElementById("crowdList");
+      const countEl = document.getElementById("crowdCount");
+
+      const filtered = crowdRows.filter(
+        (e) =>
+          (!crowdFilter.capacity || e.capacity === crowdFilter.capacity) &&
+          (!crowdFilter.budget || e.budget === crowdFilter.budget) &&
+          (!crowdFilter.room || e.room === crowdFilter.room)
+      );
+
+      countEl.textContent = crowdRows.length
+        ? filtered.length === crowdRows.length
+          ? `${crowdRows.length}곳`
+          : `${filtered.length}/${crowdRows.length}곳`
+        : "";
+
+      if (!crowdRows.length) {
+        listEl.innerHTML = '<div class="empty-hint">아직 등록된 곳이 없어요. "+ 새 장소 등록하기"로 팀원들과 함께 채워보세요.</div>';
+        return;
+      }
+      if (!filtered.length) {
+        listEl.innerHTML = '<div class="empty-hint">이 조건에 맞는 곳이 없어요.</div>';
+        return;
+      }
+
+      listEl.innerHTML = filtered
+        .map((e) => {
+          const kakaoUrl = e.kakaoLink || `https://map.kakao.com/?q=${encodeURIComponent(e.name)}`;
+          const naverUrl = `https://search.naver.com/search.naver?where=post&query=${encodeURIComponent(e.name + " 후기")}`;
+          const tags = [e.capacity, e.budget, e.room ? "룸 " + e.room : ""].filter(Boolean).join(" · ");
+          return `
+            <div class="place-item" style="cursor:default;">
+              <div class="place-name">${escapeHtml(e.name)}</div>
+              ${tags ? `<div class="place-cat">${escapeHtml(tags)}</div>` : ""}
+              ${e.review ? `<div class="place-addr">${escapeHtml(e.review)}</div>` : ""}
+              <div class="place-meta">
+                <span>${e.author ? escapeHtml(e.author) + " 등록" : ""}</span>
+                <a class="naver-link" href="${kakaoUrl}" target="_blank" rel="noopener">카카오맵</a>
+                <a class="naver-link" href="${naverUrl}" target="_blank" rel="noopener">네이버 후기</a>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    async function fetchCrowdRows() {
+      const csvUrl = localStorage.getItem(CROWD_CSV_STORAGE);
+      if (!csvUrl) return;
+      const listEl = document.getElementById("crowdList");
+      const errorEl = document.getElementById("crowdError");
+      errorEl.style.display = "none";
+      listEl.innerHTML = '<div class="empty-hint">불러오는 중...</div>';
+      try {
+        const res = await fetch(csvUrl, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const text = await res.text();
+        const table = parseCsv(text);
+        if (!table.length) {
+          crowdRows = [];
+          renderCrowdList();
+          return;
+        }
+        const headers = table[0].map((h) => h.trim());
+        const idx = buildCrowdFieldIndex(headers);
+        crowdRows = table
+          .slice(1)
+          .map((row) => crowdRowToEntry(row, idx))
+          .filter((e) => e.name)
+          .reverse();
+        renderCrowdList();
+      } catch (e) {
+        console.error("회식 맛집 시트 불러오기 실패:", e);
+        listEl.innerHTML = "";
+        errorEl.style.display = "block";
+      }
+    }
+
+    function showCrowdSetup() {
+      document.getElementById("crowdSetup").hidden = false;
+      document.getElementById("crowdApp").hidden = true;
+    }
+
+    function showCrowdApp() {
+      document.getElementById("crowdSetup").hidden = true;
+      document.getElementById("crowdApp").hidden = false;
+    }
+
+    function applyCrowdFormLink(formUrl) {
+      const link = document.getElementById("crowdFormLink");
+      if (formUrl) {
+        link.href = formUrl;
+        link.hidden = false;
+      } else {
+        link.hidden = true;
+      }
+    }
+
+    function initCrowdFilters() {
+      const map = [
+        ["crowdFilterCapacity", "capacity", FILTER_CAPACITY_OPTIONS],
+        ["crowdFilterBudget", "budget", FILTER_BUDGET_OPTIONS],
+        ["crowdFilterRoom", "room", FILTER_ROOM_OPTIONS],
+      ];
+      map.forEach(([elId, field, options]) => {
+        const sel = document.getElementById(elId);
+        sel.innerHTML = options.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+        sel.addEventListener("change", (e) => {
+          crowdFilter[field] = e.target.value;
+          renderCrowdList();
+        });
+      });
+    }
+
+    function initCrowd() {
+      const csv = localStorage.getItem(CROWD_CSV_STORAGE) || "";
+      const form = localStorage.getItem(CROWD_FORM_STORAGE) || "";
+      document.getElementById("crowdCsvInput").value = csv;
+      document.getElementById("crowdFormInput").value = form;
+
+      document.getElementById("crowdSaveBtn").addEventListener("click", () => {
+        const newCsv = document.getElementById("crowdCsvInput").value.trim();
+        const newForm = document.getElementById("crowdFormInput").value.trim();
+        if (!newCsv) return;
+        localStorage.setItem(CROWD_CSV_STORAGE, newCsv);
+        if (newForm) localStorage.setItem(CROWD_FORM_STORAGE, newForm);
+        else localStorage.removeItem(CROWD_FORM_STORAGE);
+        applyCrowdFormLink(newForm);
+        showCrowdApp();
+        fetchCrowdRows();
+      });
+
+      document.getElementById("crowdRefreshBtn").addEventListener("click", fetchCrowdRows);
+      document.getElementById("crowdSettingsBtn").addEventListener("click", showCrowdSetup);
+
+      initCrowdFilters();
+
+      if (csv) {
+        applyCrowdFormLink(form);
+        showCrowdApp();
+        fetchCrowdRows();
+      } else {
+        showCrowdSetup();
+      }
+    }
+
     function initApp() {
       const container = document.getElementById("map");
       map = new kakao.maps.Map(container, {
@@ -849,6 +1112,7 @@
     });
 
     tryStart();
+    initCrowd();
   </script>
 </body>
 </html>
