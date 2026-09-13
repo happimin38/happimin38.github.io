@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>과천 맛집 지도</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="과천 직장인을 위한 주변 맛집 지도 (카카오맵 API)" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <meta name="theme-color" content="#050816" />
+  <style>
+    :root {
+      --accent: #f97316;
+      --accent-2: #22c55e;
+      --accent-3: #38bdf8;
+      --accent-4: #a78bfa;
+      --danger: #f87171;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border-subtle: #1f2937;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR",
+        "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-main);
+      background: radial-gradient(circle at top, #111827 0, #020617 55%);
+      color: var(--text-main);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page { max-width: 1040px; margin: 0 auto; padding: 32px 20px 80px; }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(140deg, #f97316, #facc15 55%, #22c55e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: #041016;
+      box-shadow: 0 0 28px rgba(249, 115, 22, 0.35);
+    }
+
+    .brand-name { font-size: 19px; font-weight: 700; }
+    .brand-role { font-size: 12px; color: var(--text-muted); }
+
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .nav-links a, .nav-links button {
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      color: var(--text-main);
+      background: rgba(15, 23, 42, 0.85);
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .nav-links a:hover, .nav-links button:hover { border-color: var(--accent-3); color: var(--accent-3); }
+
+    /* Setup panel */
+    .setup {
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.95);
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+
+    .setup h2 { font-size: 16px; margin-bottom: 10px; }
+    .setup p { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+    .setup ol { font-size: 13px; color: var(--text-muted); margin: 0 0 14px 18px; }
+    .setup ol li { margin-bottom: 6px; }
+    .setup code {
+      background: rgba(2, 6, 23, 0.6);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--accent-3);
+    }
+
+    .key-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .key-row input {
+      flex: 1;
+      min-width: 220px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(2, 6, 23, 0.6);
+      color: var(--text-main);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .key-row input:focus { outline: none; border-color: var(--accent-3); }
+
+    .btn-primary {
+      padding: 11px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--accent-2);
+      background: rgba(34, 197, 94, 0.14);
+      color: #bbf7d0;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover { background: rgba(34, 197, 94, 0.24); }
+
+    .setup-error {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--danger);
+      display: none;
+    }
+
+    /* Search bar */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-bar input {
+      flex: 1;
+      min-width: 200px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-main);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .search-bar input:focus { outline: none; border-color: var(--accent-3); }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+
+    .chip {
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .chip:hover, .chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(249, 115, 22, 0.1);
+    }
+
+    /* Layout: map + list */
+    .map-layout {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    #map {
+      width: 100%;
+      height: 460px;
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      background: #111827;
+    }
+
+    .panel {
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.9);
+      padding: 16px;
+      max-height: 460px;
+      overflow-y: auto;
+    }
+
+    .panel h3 {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .place-item {
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .place-item:hover, .place-item.active {
+      border-color: var(--accent-3);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .place-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .place-cat { font-size: 11px; color: var(--accent-4); margin-bottom: 3px; }
+    .place-addr { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .place-meta { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+    .fav-btn {
+      border: none;
+      background: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--text-muted);
+      line-height: 1;
+      padding: 2px 4px;
+    }
+
+    .fav-btn.saved { color: #facc15; }
+
+    .empty-hint { font-size: 12px; color: var(--text-muted); padding: 8px 4px; }
+
+    footer {
+      margin-top: 24px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    footer a { color: var(--accent-3); text-decoration: underline; text-underline-offset: 3px; }
+
+    @media (max-width: 800px) {
+      .map-layout { grid-template-columns: 1fr; }
+      #map { height: 320px; }
+      .panel { max-height: none; }
+    }
+
+    @media (max-width: 768px) {
+      .page { padding: 20px 16px 48px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-logo">🍚</div>
+        <div>
+          <div class="brand-name">과천 맛집 지도</div>
+          <div class="brand-role">정부과천청사 근처 직장인용</div>
+        </div>
+      </div>
+      <div class="nav-links">
+        <a href="index.html">← 홈</a>
+        <button type="button" id="settingsBtn">API 키 설정</button>
+      </div>
+    </header>
+
+    <section class="setup" id="setupPanel">
+      <h2>카카오맵 JavaScript 키가 필요해요</h2>
+      <p>지도는 카카오맵 API로 그려집니다. 아래 순서대로 무료 키를 발급받아 붙여넣으면 바로 쓸 수 있어요.</p>
+      <ol>
+        <li><a href="https://developers.kakao.com" target="_blank" rel="noopener" style="color:var(--accent-3);text-decoration:underline;">카카오 개발자 사이트</a>에서 로그인 후 애플리케이션을 하나 추가하세요.</li>
+        <li>앱 요약 정보의 <code>JavaScript 키</code>를 복사하세요.</li>
+        <li>앱 설정 → 플랫폼 → Web 플랫폼 등록에 이 페이지 주소(예: <code id="originHint">https://happimin38.github.io</code>)를 추가하세요.</li>
+        <li>아래 입력칸에 키를 붙여넣고 저장하세요. 키는 이 브라우저에만 저장되고 깃허브에는 올라가지 않아요.</li>
+      </ol>
+      <div class="key-row">
+        <input type="text" id="apiKeyInput" placeholder="카카오 JavaScript 키를 붙여넣으세요" autocomplete="off" spellcheck="false" />
+        <button class="btn-primary" id="saveKeyBtn" type="button">저장하고 지도 열기</button>
+      </div>
+      <div class="setup-error" id="setupError">키가 올바르지 않거나 도메인이 등록되지 않았어요. 플랫폼 설정을 다시 확인해 주세요.</div>
+    </section>
+
+    <div id="appArea" hidden>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="가게 이름이나 메뉴로 검색 (예: 삼겹살, 파스타)" />
+        <button class="btn-primary" id="searchBtn" type="button">검색</button>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip" data-kw="맛집">전체</button>
+        <button class="chip" data-kw="한식">한식</button>
+        <button class="chip" data-kw="중식">중식</button>
+        <button class="chip" data-kw="일식">일식</button>
+        <button class="chip" data-kw="양식">양식</button>
+        <button class="chip" data-kw="분식">분식</button>
+        <button class="chip" data-kw="카페">카페</button>
+        <button class="chip" data-kw="술집">술집</button>
+      </div>
+
+      <div class="map-layout">
+        <div id="map"></div>
+        <div class="panel">
+          <h3><span>검색 결과</span><span id="resultCount"></span></h3>
+          <div id="resultList"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="max-height:none;">
+        <h3><span>⭐ 저장한 맛집</span><span id="favCount"></span></h3>
+        <div id="favList"></div>
+      </div>
+    </div>
+
+    <footer>
+      맛집 검색은 카카오맵 API를 사용합니다. 저장한 맛집 목록은 이 브라우저에만 남아요.
+    </footer>
+  </div>
+
+  <script>
+    const KEY_STORAGE = "kakaoMapApiKey_v1";
+    const FAV_STORAGE = "gwacheonFavorites_v1";
+
+    // 정부과천청사역 근처를 기본 중심으로 사용
+    const OFFICE = { lat: 37.4293, lng: 126.9875, name: "정부과천청사" };
+
+    const setupPanel = document.getElementById("setupPanel");
+    const appArea = document.getElementById("appArea");
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const saveKeyBtn = document.getElementById("saveKeyBtn");
+    const setupError = document.getElementById("setupError");
+    const settingsBtn = document.getElementById("settingsBtn");
+    const originHint = document.getElementById("originHint");
+
+    originHint.textContent = window.location.origin + window.location.pathname;
+
+    let map, ps, geocoder;
+    let markers = [];
+    let favMarkers = [];
+    let activePlaceId = null;
+
+    function loadFavs() {
+      try {
+        const raw = localStorage.getItem(FAV_STORAGE);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveFavs(list) {
+      localStorage.setItem(FAV_STORAGE, JSON.stringify(list));
+    }
+
+    let favs = loadFavs();
+
+    function isFav(id) {
+      return favs.some((f) => f.id === id);
+    }
+
+    function toggleFav(place) {
+      if (isFav(place.id)) {
+        favs = favs.filter((f) => f.id !== place.id);
+      } else {
+        favs.push(place);
+      }
+      saveFavs(favs);
+      renderResults(lastResults);
+      renderFavs();
+    }
+
+    function haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const toRad = (d) => (d * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function formatDistance(m) {
+      if (m < 1000) return `${Math.round(m)}m`;
+      return `${(m / 1000).toFixed(1)}km`;
+    }
+
+    function clearMarkers() {
+      markers.forEach((m) => m.setMap(null));
+      markers = [];
+    }
+
+    function clearFavMarkers() {
+      favMarkers.forEach((m) => m.setMap(null));
+      favMarkers = [];
+    }
+
+    let infowindow;
+    let lastResults = [];
+
+    function placeToItem(place) {
+      const lat = Number(place.y);
+      const lng = Number(place.x);
+      return {
+        id: place.id,
+        name: place.place_name,
+        category: (place.category_name || "").split(">").pop().trim(),
+        address: place.road_address_name || place.address_name,
+        phone: place.phone,
+        lat,
+        lng,
+        url: place.place_url,
+        distance: haversine(OFFICE.lat, OFFICE.lng, lat, lng),
+      };
+    }
+
+    function focusPlace(item) {
+      activePlaceId = item.id;
+      map.panTo(new kakao.maps.LatLng(item.lat, item.lng));
+      infowindow.setContent(
+        `<div style="padding:8px 10px;font-size:12px;color:#111;min-width:160px;">
+          <strong>${item.name}</strong><br/>
+          ${item.address}<br/>
+          ${item.phone ? item.phone + "<br/>" : ""}
+          <a href="${item.url}" target="_blank" rel="noopener">카카오맵에서 보기</a>
+        </div>`
+      );
+      const marker = markers.find((m) => m.__id === item.id) || favMarkers.find((m) => m.__id === item.id);
+      if (marker) infowindow.open(map, marker);
+      renderResults(lastResults);
+    }
+
+    function renderResults(items) {
+      lastResults = items;
+      const list = document.getElementById("resultList");
+      const count = document.getElementById("resultCount");
+      count.textContent = items.length ? `${items.length}곳` : "";
+      if (!items.length) {
+        list.innerHTML = '<div class="empty-hint">검색 결과가 없어요.</div>';
+        return;
+      }
+      list.innerHTML = "";
+      items.forEach((item) => {
+        const el = document.createElement("div");
+        el.className = "place-item" + (item.id === activePlaceId ? " active" : "");
+        el.innerHTML = `
+          <div class="place-name">${item.name}</div>
+          <div class="place-cat">${item.category || ""}</div>
+          <div class="place-addr">${item.address}</div>
+          <div class="place-meta">
+            <span>${OFFICE.name}에서 ${formatDistance(item.distance)}</span>
+            <button class="fav-btn ${isFav(item.id) ? "saved" : ""}" title="저장">${isFav(item.id) ? "★" : "☆"}</button>
+          </div>
+        `;
+        el.addEventListener("click", (e) => {
+          if (e.target.classList.contains("fav-btn")) return;
+          focusPlace(item);
+        });
+        el.querySelector(".fav-btn").addEventListener("click", () => toggleFav(item));
+        list.appendChild(el);
+      });
+    }
+
+    function renderFavs() {
+      const list = document.getElementById("favList");
+      const count = document.getElementById("favCount");
+      count.textContent = favs.length ? `${favs.length}곳` : "";
+      clearFavMarkers();
+      if (!favs.length) {
+        list.innerHTML = '<div class="empty-hint">아직 저장한 맛집이 없어요. 결과 목록에서 ☆를 눌러보세요.</div>';
+        return;
+      }
+      list.innerHTML = "";
+      favs
+        .slice()
+        .sort((a, b) => a.distance - b.distance)
+        .forEach((item) => {
+          const el = document.createElement("div");
+          el.className = "place-item";
+          el.innerHTML = `
+            <div class="place-name">${item.name}</div>
+            <div class="place-cat">${item.category || ""}</div>
+            <div class="place-addr">${item.address}</div>
+            <div class="place-meta">
+              <span>${OFFICE.name}에서 ${formatDistance(item.distance)}</span>
+              <button class="fav-btn saved" title="삭제">★</button>
+            </div>
+          `;
+          el.addEventListener("click", (e) => {
+            if (e.target.classList.contains("fav-btn")) return;
+            focusPlace(item);
+          });
+          el.querySelector(".fav-btn").addEventListener("click", () => toggleFav(item));
+          list.appendChild(el);
+
+          const marker = new kakao.maps.Marker({
+            map,
+            position: new kakao.maps.LatLng(item.lat, item.lng),
+            image: new kakao.maps.MarkerImage(
+              "data:image/svg+xml;base64," +
+                btoa(
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><circle cx="15" cy="15" r="12" fill="%23facc15" stroke="%23111827" stroke-width="2"/></svg>'.replace(
+                    /%23/g,
+                    "#"
+                  )
+                ),
+              new kakao.maps.Size(30, 30)
+            ),
+          });
+          marker.__id = item.id;
+          kakao.maps.event.addListener(marker, "click", () => focusPlace(item));
+          favMarkers.push(marker);
+        });
+    }
+
+    function placesSearchCB(data, status) {
+      if (status !== kakao.maps.services.Status.OK) {
+        renderResults([]);
+        return;
+      }
+      clearMarkers();
+      const items = data.map(placeToItem);
+      items.forEach((item) => {
+        const marker = new kakao.maps.Marker({
+          map,
+          position: new kakao.maps.LatLng(item.lat, item.lng),
+        });
+        marker.__id = item.id;
+        kakao.maps.event.addListener(marker, "click", () => focusPlace(item));
+        markers.push(marker);
+      });
+      renderResults(items);
+    }
+
+    function searchPlaces(keyword) {
+      if (!keyword || !keyword.trim()) return;
+      ps.keywordSearch(keyword, placesSearchCB, {
+        location: new kakao.maps.LatLng(OFFICE.lat, OFFICE.lng),
+        radius: 3000,
+        sort: kakao.maps.services.SortBy.DISTANCE,
+      });
+    }
+
+    function setActiveChip(kw) {
+      document.querySelectorAll(".chip").forEach((c) => {
+        c.classList.toggle("active", c.dataset.kw === kw);
+      });
+    }
+
+    function initApp() {
+      const container = document.getElementById("map");
+      map = new kakao.maps.Map(container, {
+        center: new kakao.maps.LatLng(OFFICE.lat, OFFICE.lng),
+        level: 4,
+      });
+
+      new kakao.maps.Marker({
+        map,
+        position: new kakao.maps.LatLng(OFFICE.lat, OFFICE.lng),
+        title: OFFICE.name,
+      });
+
+      infowindow = new kakao.maps.InfoWindow({ zIndex: 10 });
+      ps = new kakao.maps.services.Places();
+
+      document.getElementById("searchBtn").addEventListener("click", () => {
+        setActiveChip(null);
+        searchPlaces(document.getElementById("searchInput").value);
+      });
+      document.getElementById("searchInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          setActiveChip(null);
+          searchPlaces(document.getElementById("searchInput").value);
+        }
+      });
+
+      document.querySelectorAll(".chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          setActiveChip(chip.dataset.kw);
+          document.getElementById("searchInput").value = "";
+          searchPlaces(chip.dataset.kw);
+        });
+      });
+
+      setActiveChip("맛집");
+      searchPlaces("맛집");
+      renderFavs();
+    }
+
+    function showApp() {
+      setupPanel.hidden = true;
+      appArea.hidden = false;
+    }
+
+    function showSetup(withError) {
+      setupPanel.hidden = false;
+      appArea.hidden = true;
+      setupError.style.display = withError ? "block" : "none";
+    }
+
+    function loadKakaoSdk(key) {
+      const existing = document.getElementById("kakaoSdk");
+      if (existing) existing.remove();
+      const script = document.createElement("script");
+      script.id = "kakaoSdk";
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(
+        key
+      )}&libraries=services&autoload=false`;
+      script.onload = () => {
+        if (typeof kakao === "undefined" || !kakao.maps) {
+          showSetup(true);
+          return;
+        }
+        kakao.maps.load(() => {
+          try {
+            showApp();
+            initApp();
+          } catch (e) {
+            showSetup(true);
+          }
+        });
+      };
+      script.onerror = () => showSetup(true);
+      document.head.appendChild(script);
+    }
+
+    function tryStart() {
+      const key = localStorage.getItem(KEY_STORAGE);
+      if (key) {
+        apiKeyInput.value = key;
+        loadKakaoSdk(key);
+      } else {
+        showSetup(false);
+      }
+    }
+
+    saveKeyBtn.addEventListener("click", () => {
+      const key = apiKeyInput.value.trim();
+      if (!key) return;
+      localStorage.setItem(KEY_STORAGE, key);
+      loadKakaoSdk(key);
+    });
+
+    apiKeyInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") saveKeyBtn.click();
+    });
+
+    settingsBtn.addEventListener("click", () => {
+      showSetup(false);
+    });
+
+    tryStart();
+  </script>
+</body>
+</html>
