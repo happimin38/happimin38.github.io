@@ -263,6 +263,34 @@
       margin-bottom: 14px;
     }
 
+    .cond-panel {
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.85);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    .cond-title { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .cond-hint { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    .cond-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .cond-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-naver {
+      padding: 11px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--accent-3);
+      background: rgba(56, 189, 248, 0.14);
+      color: #bae6fd;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-naver:hover { background: rgba(56, 189, 248, 0.24); }
+
     .fav-btn {
       border: none;
       background: none;
@@ -331,6 +359,20 @@
     </section>
 
     <div id="appArea" hidden>
+      <div class="cond-panel" id="condPanel">
+        <div class="cond-title">회식 조건으로 찾기</div>
+        <div class="cond-row">
+          <select id="condCapacity" class="tag-select"></select>
+          <select id="condBudget" class="tag-select"></select>
+          <select id="condRoom" class="tag-select"></select>
+        </div>
+        <div class="cond-actions">
+          <button class="btn-primary" id="condSearchKakaoBtn" type="button">카카오맵에서 검색</button>
+          <button class="btn-naver" id="condSearchNaverBtn" type="button">네이버 블로그 후기 검색</button>
+        </div>
+        <div class="cond-hint">카카오 검색은 텍스트 매칭이라 조건이 결과에 정확히 반영되지 않을 수 있어요. 네이버 후기 검색으로 사람 후기를 직접 확인하는 걸 추천해요.</div>
+      </div>
+
       <div class="search-bar">
         <input type="text" id="searchInput" placeholder="가게 이름이나 메뉴로 검색 (예: 삼겹살, 파스타)" />
         <button class="btn-primary" id="searchBtn" type="button">검색</button>
@@ -673,6 +715,60 @@
     const FILTER_BUDGET_OPTIONS = [["", "예산 전체"], ...BUDGET_OPTIONS.slice(1)];
     const FILTER_ROOM_OPTIONS = [["", "룸 전체"], ...ROOM_OPTIONS.slice(1)];
 
+    const COND_CAPACITY_OPTIONS = [["", "인원 상관없음"], ...CAPACITY_OPTIONS.slice(1)];
+    const COND_BUDGET_OPTIONS = [["", "예산 상관없음"], ...BUDGET_OPTIONS.slice(1)];
+    const COND_ROOM_OPTIONS = [
+      ["", "룸 상관없음"],
+      ["있음", "룸 필요"],
+      ["없음", "룸 필요없음"],
+    ];
+
+    function currentChipKeyword() {
+      const active = document.querySelector(".chip.active");
+      return active ? active.dataset.kw : "";
+    }
+
+    function buildConditionTerms() {
+      const capacity = document.getElementById("condCapacity").value;
+      const budget = document.getElementById("condBudget").value;
+      const room = document.getElementById("condRoom").value;
+      const terms = [];
+      if (capacity) terms.push(capacity);
+      if (budget) terms.push(budget);
+      if (room === "있음") terms.push("룸");
+      return terms;
+    }
+
+    function initCondPanel() {
+      const map = [
+        ["condCapacity", COND_CAPACITY_OPTIONS],
+        ["condBudget", COND_BUDGET_OPTIONS],
+        ["condRoom", COND_ROOM_OPTIONS],
+      ];
+      map.forEach(([elId, options]) => {
+        const sel = document.getElementById(elId);
+        sel.innerHTML = options.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+      });
+
+      document.getElementById("condSearchKakaoBtn").addEventListener("click", () => {
+        const base = currentChipKeyword() || document.getElementById("searchInput").value.trim() || "회식";
+        const keyword = [base, ...buildConditionTerms()].join(" ");
+        setActiveChip(null);
+        document.getElementById("searchInput").value = "";
+        searchPlaces(keyword);
+      });
+
+      document.getElementById("condSearchNaverBtn").addEventListener("click", () => {
+        const base = currentChipKeyword() || document.getElementById("searchInput").value.trim() || "회식";
+        const query = `과천 ${[base, ...buildConditionTerms()].join(" ")} 후기`;
+        window.open(
+          `https://search.naver.com/search.naver?where=post&query=${encodeURIComponent(query)}`,
+          "_blank",
+          "noopener"
+        );
+      });
+    }
+
     function initFavFilters() {
       const map = [
         ["filterCapacity", "capacity", FILTER_CAPACITY_OPTIONS],
@@ -732,6 +828,7 @@
 
       setActiveChip("맛집");
       searchPlaces("맛집");
+      initCondPanel();
       initFavFilters();
       renderFavs();
     }
