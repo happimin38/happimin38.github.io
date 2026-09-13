@@ -305,6 +305,30 @@
 
     .empty-hint { font-size: 12px; color: var(--text-muted); padding: 8px 4px; }
 
+    .pager {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pager button {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-main);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .pager button:hover:not(:disabled) { border-color: var(--accent-3); color: var(--accent-3); }
+    .pager button:disabled { opacity: 0.35; cursor: default; }
+
     footer {
       margin-top: 24px;
       font-size: 11px;
@@ -393,6 +417,7 @@
         <div class="panel">
           <h3><span>검색 결과</span><span id="resultCount"></span></h3>
           <div id="resultList"></div>
+          <div class="pager" id="resultPager"></div>
         </div>
       </div>
 
@@ -683,9 +708,27 @@
         });
     }
 
-    function placesSearchCB(data, status) {
+    function renderPager(pagination) {
+      const pager = document.getElementById("resultPager");
+      if (!pagination || pagination.last <= 1) {
+        pager.innerHTML = "";
+        return;
+      }
+      pager.innerHTML = `
+        <button id="resultPrevBtn" type="button" ${pagination.hasPrevPage ? "" : "disabled"}>이전</button>
+        <span>${pagination.current} / ${pagination.last} 페이지</span>
+        <button id="resultNextBtn" type="button" ${pagination.hasNextPage ? "" : "disabled"}>다음</button>
+      `;
+      const prevBtn = document.getElementById("resultPrevBtn");
+      const nextBtn = document.getElementById("resultNextBtn");
+      if (prevBtn) prevBtn.addEventListener("click", () => pagination.prevPage());
+      if (nextBtn) nextBtn.addEventListener("click", () => pagination.nextPage());
+    }
+
+    function placesSearchCB(data, status, pagination) {
       if (status !== kakao.maps.services.Status.OK) {
         renderResults([]);
+        renderPager(null);
         return;
       }
       clearMarkers();
@@ -700,6 +743,7 @@
         markers.push(marker);
       });
       renderResults(items);
+      renderPager(pagination);
     }
 
     function searchPlaces(keyword) {
@@ -708,6 +752,7 @@
         location: new kakao.maps.LatLng(OFFICE.lat, OFFICE.lng),
         radius: 3000,
         sort: kakao.maps.services.SortBy.DISTANCE,
+        size: 5,
       });
     }
 
