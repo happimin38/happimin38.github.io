@@ -394,7 +394,7 @@
           <button class="btn-primary" id="condSearchKakaoBtn" type="button">카카오맵에서 검색</button>
           <button class="btn-naver" id="condSearchNaverBtn" type="button">네이버 블로그 후기 검색</button>
         </div>
-        <div class="cond-hint">카카오 검색은 텍스트 매칭이라 조건이 결과에 정확히 반영되지 않을 수 있어요. 네이버 후기 검색으로 사람 후기를 직접 확인하는 걸 추천해요.</div>
+        <div class="cond-hint">카카오맵 검색은 키워드(왼쪽 검색창/카테고리)만으로 찾고, 인원·예산·룸 조건은 네이버 후기 검색에만 반영돼요. 조건에 맞는 곳인지는 네이버 후기로 확인해 주세요.</div>
       </div>
 
       <div class="search-bar">
@@ -796,11 +796,11 @@
       });
 
       document.getElementById("condSearchKakaoBtn").addEventListener("click", () => {
+        // Kakao's keyword search needs every term to match, so condition
+        // words (which never appear in a place name) would just zero out
+        // the results — only the base keyword goes to Kakao.
         const base = currentChipKeyword() || document.getElementById("searchInput").value.trim() || "회식";
-        const keyword = [base, ...buildConditionTerms()].join(" ");
-        setActiveChip(null);
-        document.getElementById("searchInput").value = "";
-        searchPlaces(keyword);
+        searchPlaces(base);
       });
 
       document.getElementById("condSearchNaverBtn").addEventListener("click", () => {
