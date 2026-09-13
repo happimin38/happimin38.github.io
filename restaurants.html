@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>과천 맛집 지도</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="description" content="과천 직장인을 위한 주변 맛집 지도 (카카오맵 API)" />
+  <meta name="description" content="과천 직장인을 위한 회식 장소 지도 — 인원/예산/룸 태그로 찾고 네이버 후기까지 확인" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <meta name="theme-color" content="#050816" />
   <style>
@@ -229,7 +229,39 @@
     .place-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
     .place-cat { font-size: 11px; color: var(--accent-4); margin-bottom: 3px; }
     .place-addr { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-    .place-meta { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .place-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      row-gap: 6px;
+    }
+
+    .naver-link { color: var(--accent-2); text-decoration: underline; text-underline-offset: 2px; }
+    .naver-link:hover { color: #86efac; }
+
+    .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+    .tag-select {
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(2, 6, 23, 0.6);
+      color: var(--text-main);
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .fav-filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
 
     .fav-btn {
       border: none;
@@ -272,8 +304,8 @@
       <div class="brand">
         <div class="brand-logo">🍚</div>
         <div>
-          <div class="brand-name">과천 맛집 지도</div>
-          <div class="brand-role">정부과천청사 근처 직장인용</div>
+          <div class="brand-name">과천 회식 맛집 지도</div>
+          <div class="brand-role">정부과천청사 근처 회식 장소 찾기</div>
         </div>
       </div>
       <div class="nav-links">
@@ -323,13 +355,19 @@
       </div>
 
       <div class="panel" style="max-height:none;">
-        <h3><span>⭐ 저장한 맛집</span><span id="favCount"></span></h3>
+        <h3><span>⭐ 저장한 맛집 (회식용)</span><span id="favCount"></span></h3>
+        <div class="fav-filters" id="favFilters">
+          <select id="filterCapacity" class="tag-select"></select>
+          <select id="filterBudget" class="tag-select"></select>
+          <select id="filterRoom" class="tag-select"></select>
+        </div>
         <div id="favList"></div>
       </div>
     </div>
 
     <footer>
-      맛집 검색은 카카오맵 API를 사용합니다. 저장한 맛집 목록은 이 브라우저에만 남아요.
+      맛집 검색은 카카오맵 API를 사용합니다. 리뷰·평점·룸 정보는 API로 제공되지 않아 "네이버 후기" 링크로 직접 확인하세요.<br />
+      저장한 맛집과 인원/예산/룸 태그는 이 브라우저에만 남아요.
     </footer>
   </div>
 
@@ -370,6 +408,42 @@
 
     let favs = loadFavs();
 
+    const CAPACITY_OPTIONS = [
+      ["", "인원 미정"],
+      ["10인 미만", "10인 미만"],
+      ["10~20인", "10~20인"],
+      ["20인 이상", "20인 이상"],
+    ];
+    const BUDGET_OPTIONS = [
+      ["", "예산 미정"],
+      ["2만원대", "1인 2만원대"],
+      ["3만원대", "1인 3만원대"],
+      ["4만원 이상", "1인 4만원 이상"],
+    ];
+    const ROOM_OPTIONS = [
+      ["", "룸 여부 미정"],
+      ["있음", "룸 있음"],
+      ["없음", "룸 없음"],
+    ];
+
+    const favFilter = { capacity: "", budget: "", room: "" };
+
+    function naverReviewUrl(item) {
+      const areaHint = (item.address || "").split(" ").slice(0, 2).join(" ");
+      const q = `${item.name} ${areaHint} 후기`.trim();
+      return `https://search.naver.com/search.naver?where=post&query=${encodeURIComponent(q)}`;
+    }
+
+    function tagSelectHtml(field, options, current) {
+      const opts = options
+        .map(
+          ([value, label]) =>
+            `<option value="${value}" ${value === (current || "") ? "selected" : ""}>${label}</option>`
+        )
+        .join("");
+      return `<select class="tag-select" data-field="${field}">${opts}</select>`;
+    }
+
     function isFav(id) {
       return favs.some((f) => f.id === id);
     }
@@ -378,7 +452,7 @@
       if (isFav(place.id)) {
         favs = favs.filter((f) => f.id !== place.id);
       } else {
-        favs.push(place);
+        favs.push({ ...place, capacity: "", budget: "", room: "" });
       }
       saveFavs(favs);
       renderResults(lastResults);
@@ -465,11 +539,12 @@
           <div class="place-addr">${item.address}</div>
           <div class="place-meta">
             <span>${OFFICE.name}에서 ${formatDistance(item.distance)}</span>
+            <a class="naver-link" href="${naverReviewUrl(item)}" target="_blank" rel="noopener">네이버 후기</a>
             <button class="fav-btn ${isFav(item.id) ? "saved" : ""}" title="저장">${isFav(item.id) ? "★" : "☆"}</button>
           </div>
         `;
         el.addEventListener("click", (e) => {
-          if (e.target.classList.contains("fav-btn")) return;
+          if (e.target.classList.contains("fav-btn") || e.target.classList.contains("naver-link")) return;
           focusPlace(item);
         });
         el.querySelector(".fav-btn").addEventListener("click", () => toggleFav(item));
@@ -480,14 +555,32 @@
     function renderFavs() {
       const list = document.getElementById("favList");
       const count = document.getElementById("favCount");
-      count.textContent = favs.length ? `${favs.length}곳` : "";
       clearFavMarkers();
+
+      const filtered = favs.filter(
+        (f) =>
+          (!favFilter.capacity || f.capacity === favFilter.capacity) &&
+          (!favFilter.budget || f.budget === favFilter.budget) &&
+          (!favFilter.room || f.room === favFilter.room)
+      );
+
+      count.textContent = favs.length
+        ? filtered.length === favs.length
+          ? `${favs.length}곳`
+          : `${filtered.length}/${favs.length}곳`
+        : "";
+
       if (!favs.length) {
         list.innerHTML = '<div class="empty-hint">아직 저장한 맛집이 없어요. 결과 목록에서 ☆를 눌러보세요.</div>';
         return;
       }
-      list.innerHTML = "";
-      favs
+      if (!filtered.length) {
+        list.innerHTML = '<div class="empty-hint">이 조건에 맞는 저장된 맛집이 없어요.</div>';
+      } else {
+        list.innerHTML = "";
+      }
+
+      filtered
         .slice()
         .sort((a, b) => a.distance - b.distance)
         .forEach((item) => {
@@ -499,14 +592,33 @@
             <div class="place-addr">${item.address}</div>
             <div class="place-meta">
               <span>${OFFICE.name}에서 ${formatDistance(item.distance)}</span>
+              <a class="naver-link" href="${naverReviewUrl(item)}" target="_blank" rel="noopener">네이버 후기</a>
               <button class="fav-btn saved" title="삭제">★</button>
+            </div>
+            <div class="tag-row">
+              ${tagSelectHtml("capacity", CAPACITY_OPTIONS, item.capacity)}
+              ${tagSelectHtml("budget", BUDGET_OPTIONS, item.budget)}
+              ${tagSelectHtml("room", ROOM_OPTIONS, item.room)}
             </div>
           `;
           el.addEventListener("click", (e) => {
-            if (e.target.classList.contains("fav-btn")) return;
+            if (
+              e.target.classList.contains("fav-btn") ||
+              e.target.classList.contains("naver-link") ||
+              e.target.classList.contains("tag-select")
+            )
+              return;
             focusPlace(item);
           });
           el.querySelector(".fav-btn").addEventListener("click", () => toggleFav(item));
+          el.querySelectorAll(".tag-select").forEach((sel) => {
+            sel.addEventListener("click", (e) => e.stopPropagation());
+            sel.addEventListener("change", (e) => {
+              item[e.target.dataset.field] = e.target.value;
+              saveFavs(favs);
+              renderFavs();
+            });
+          });
           list.appendChild(el);
 
           const marker = new kakao.maps.Marker({
@@ -557,6 +669,26 @@
       });
     }
 
+    const FILTER_CAPACITY_OPTIONS = [["", "인원 전체"], ...CAPACITY_OPTIONS.slice(1)];
+    const FILTER_BUDGET_OPTIONS = [["", "예산 전체"], ...BUDGET_OPTIONS.slice(1)];
+    const FILTER_ROOM_OPTIONS = [["", "룸 전체"], ...ROOM_OPTIONS.slice(1)];
+
+    function initFavFilters() {
+      const map = [
+        ["filterCapacity", "capacity", FILTER_CAPACITY_OPTIONS],
+        ["filterBudget", "budget", FILTER_BUDGET_OPTIONS],
+        ["filterRoom", "room", FILTER_ROOM_OPTIONS],
+      ];
+      map.forEach(([elId, field, options]) => {
+        const sel = document.getElementById(elId);
+        sel.innerHTML = options.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+        sel.addEventListener("change", (e) => {
+          favFilter[field] = e.target.value;
+          renderFavs();
+        });
+      });
+    }
+
     function setActiveChip(kw) {
       document.querySelectorAll(".chip").forEach((c) => {
         c.classList.toggle("active", c.dataset.kw === kw);
@@ -600,6 +732,7 @@
 
       setActiveChip("맛집");
       searchPlaces("맛집");
+      initFavFilters();
       renderFavs();
     }
 
