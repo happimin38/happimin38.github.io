@@ -1,0 +1,17 @@
+{
+  "name": "경제 상식 노트 · 용어 · 기사",
+  "short_name": "경제 상식 노트",
+  "description": "매일 경제 용어 하나를 익히고 관련 기사를 찾아 읽는 개인용 학습 노트",
+  "lang": "ko",
+  "start_url": "./economics.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c1c14",
+  "theme_color": "#0c1c14",
+  "icons": [
+    { "src": "icons/icon-economics-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-economics-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-economics-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
