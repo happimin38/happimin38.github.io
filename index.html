@@ -186,6 +186,24 @@
     .btn-clear:hover { border-color: var(--accent); color: var(--accent); }
     .btn-clear[hidden] { display: none; }
 
+    /* Category filter on the list */
+    #listTitle { scroll-margin-top: 16px; }
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(249, 115, 22, 0.5);
+      background: rgba(249, 115, 22, 0.08);
+      font-size: 12.5px;
+    }
+    .filter-bar[hidden] { display: none; }
+    .filter-bar .filter-text { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .filter-bar .filter-sum { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
     .weekday-row,
     .calendar-grid {
       display: grid;
@@ -451,7 +469,19 @@
     /* Category breakdown */
     .cat-breakdown { display: flex; flex-direction: column; gap: 10px; }
 
-    .cat-row { display: flex; flex-direction: column; gap: 4px; }
+    .cat-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 6px 8px;
+      margin: -6px -8px;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-row:hover { background: rgba(148, 163, 184, 0.08); }
+    .cat-row.active { background: rgba(249, 115, 22, 0.12); outline: 1px solid rgba(249, 115, 22, 0.55); }
+    .expense-cat { cursor: pointer; }
 
     .cat-row-head {
       display: flex;
@@ -662,13 +692,14 @@
           <button type="submit" class="btn-add" id="submitBtn">+ 지출 추가</button>
         </form>
 
-        <div class="panel-title" style="margin-top: 18px;">지출 내역</div>
+        <div class="panel-title" style="margin-top: 18px;" id="listTitle">지출 내역</div>
+        <div class="filter-bar" id="filterBar" hidden></div>
         <div class="expense-list" id="expenseList"></div>
       </section>
 
       <section class="panel">
         <div class="panel-title">카테고리별 지출</div>
-        <p class="panel-note">지난달과 비교해 얼마나 더 썼는지 함께 보여줘요.</p>
+        <p class="panel-note">지난달과 비교해 얼마나 더 썼는지 함께 보여줘요. 항목을 누르면 그 분류의 내역만 모아 볼 수 있어요.</p>
         <div class="cat-breakdown" id="catBreakdown">
           <div class="empty-state">아직 등록된 지출이 없어요.</div>
         </div>
@@ -748,6 +779,11 @@
 
     // The calendar day being inspected; null shows the whole month.
     let selectedDay = null;
+    let selectedCategory = null;
+
+    const categoryOf = (e) => e.category || "기타";
+    // Category names go into attributes, so quotes must not break out of them.
+    const attrEscape = (str) => escapeHtml(str).replace(/"/g, "&quot;");
 
     // The entry loaded into the form for editing; null means the form adds.
     let editingId = null;
@@ -836,7 +872,7 @@
 
       const byCategory = {};
       expensesOf(key).forEach((e) => {
-        byCategory[e.category] = (byCategory[e.category] || 0) + (Number(e.amount) || 0);
+        byCategory[categoryOf(e)] = (byCategory[categoryOf(e)] || 0) + (Number(e.amount) || 0);
       });
       const ranked = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
       const topEl = document.getElementById("sumTop");
@@ -920,10 +956,17 @@
       // A picked calendar day narrows the list to that day.
       if (selectedDay) {
         expenses = expenses.filter((e) => (e.date || `${key}-01`) === selectedDay);
-        if (expenses.length === 0) {
-          listEl.innerHTML = `<div class="empty-state">${selectedDay}에는 지출 기록이 없어요.</div>`;
-          return;
-        }
+      }
+      // A picked category narrows it further, so both can be combined.
+      if (selectedCategory) {
+        expenses = expenses.filter((e) => categoryOf(e) === selectedCategory);
+      }
+      renderFilterBar(expenses);
+
+      if ((selectedDay || selectedCategory) && expenses.length === 0) {
+        const what = [selectedDay, selectedCategory].filter(Boolean).join(" · ");
+        listEl.innerHTML = `<div class="empty-state">${escapeHtml(what)} 지출 기록이 없어요.</div>`;
+        return;
       }
 
       if (expenses.length === 0) {
@@ -947,7 +990,7 @@
             .map(
               (e) => `
               <div class="expense-item${e.id === editingId ? " editing" : ""}">
-                <span class="expense-cat">${escapeHtml(e.category || "기타")}</span>
+                <span class="expense-cat" data-cat="${attrEscape(categoryOf(e))}">${escapeHtml(categoryOf(e))}</span>
                 <div class="expense-main">
                   <div class="expense-amount">${formatWon(e.amount)}</div>
                   ${e.memo ? `<div class="expense-memo">${escapeHtml(e.memo)}</div>` : ""}
@@ -971,6 +1014,35 @@
         .join("");
     }
 
+    function renderFilterBar(shown) {
+      const bar = document.getElementById("filterBar");
+      if (!selectedCategory) {
+        bar.hidden = true;
+        bar.innerHTML = "";
+        return;
+      }
+      const sum = shown.reduce((t, e) => t + (Number(e.amount) || 0), 0);
+      const color = CATEGORY_COLORS[selectedCategory] || "#94a3b8";
+      bar.innerHTML = `
+        <span class="filter-text">
+          <span class="summary-dot" style="background:${color}"></span>
+          <strong>${escapeHtml(selectedCategory)}</strong>
+          <span class="filter-sum">${shown.length}건 · ${formatWon(sum)}</span>
+        </span>
+        <button class="btn-clear" id="clearCategory" type="button">전체 보기</button>
+      `;
+      bar.hidden = false;
+    }
+
+    function toggleCategory(cat, scrollToList) {
+      selectedCategory = selectedCategory === cat ? null : cat;
+      render();
+      // The breakdown sits below the list on a phone, so bring the list up.
+      if (selectedCategory && scrollToList) {
+        document.getElementById("listTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
     function renderBreakdown(key) {
       const breakdownEl = document.getElementById("catBreakdown");
       const total = totalOf(key);
@@ -978,11 +1050,11 @@
 
       const byCategory = {};
       expensesOf(key).forEach((e) => {
-        byCategory[e.category] = (byCategory[e.category] || 0) + (Number(e.amount) || 0);
+        byCategory[categoryOf(e)] = (byCategory[categoryOf(e)] || 0) + (Number(e.amount) || 0);
       });
       const prevByCategory = {};
       expensesOf(prevKey).forEach((e) => {
-        prevByCategory[e.category] = (prevByCategory[e.category] || 0) + (Number(e.amount) || 0);
+        prevByCategory[categoryOf(e)] = (prevByCategory[categoryOf(e)] || 0) + (Number(e.amount) || 0);
       });
 
       const entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
@@ -1005,7 +1077,7 @@
             compare = `<span class="cat-compare ${cls}">지난달 ${formatSigned(diff)}</span>`;
           }
           return `
-            <div class="cat-row">
+            <div class="cat-row${cat === selectedCategory ? " active" : ""}" data-cat="${attrEscape(cat)}" role="button" tabindex="0" aria-pressed="${cat === selectedCategory}">
               <div class="cat-row-head">
                 <span class="cat-name"><span class="summary-dot" style="background:${color}"></span>${escapeHtml(cat)}</span>
                 <span class="cat-amount">${formatWon(amount)} (${pct.toFixed(1)}%)</span>
@@ -1064,6 +1136,7 @@
     document.getElementById("prevMonth").addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
       selectedDay = null;
+      selectedCategory = null;
       editingId = null;
       document.getElementById("expenseForm").reset();
       render();
@@ -1072,6 +1145,7 @@
     document.getElementById("nextMonth").addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
       selectedDay = null;
+      selectedCategory = null;
       editingId = null;
       document.getElementById("expenseForm").reset();
       render();
@@ -1207,7 +1281,33 @@
 
     document.getElementById("cancelEdit").addEventListener("click", stopEditing);
 
+    document.getElementById("catBreakdown").addEventListener("click", (e) => {
+      const row = e.target.closest(".cat-row[data-cat]");
+      if (row) toggleCategory(row.dataset.cat, true);
+    });
+
+    document.getElementById("catBreakdown").addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const row = e.target.closest(".cat-row[data-cat]");
+      if (!row) return;
+      e.preventDefault();
+      toggleCategory(row.dataset.cat, true);
+    });
+
+    document.getElementById("filterBar").addEventListener("click", (e) => {
+      if (!e.target.closest("#clearCategory")) return;
+      selectedCategory = null;
+      render();
+    });
+
     document.getElementById("expenseList").addEventListener("click", (e) => {
+      // Tapping a category label in the list filters by it too.
+      const catTag = e.target.closest(".expense-cat[data-cat]");
+      if (catTag) {
+        toggleCategory(catTag.dataset.cat, false);
+        return;
+      }
+
       const editBtn = e.target.closest(".expense-edit");
       if (editBtn) {
         startEditing(editBtn.dataset.id);
