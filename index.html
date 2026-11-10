@@ -635,15 +635,15 @@
         </div>
         <form class="expense-form" id="expenseForm">
           <select id="expenseCategory">
-            <option value="식비">식비</option>
-            <option value="교통">교통</option>
-            <option value="주거/공과금">주거/공과금</option>
-            <option value="통신">통신</option>
-            <option value="쇼핑">쇼핑</option>
-            <option value="문화/여가">문화/여가</option>
-            <option value="의료/건강">의료/건강</option>
-            <option value="교육">교육</option>
+            <option value="먹기">먹기</option>
+            <option value="놀기">놀기</option>
+            <option value="사기">사기</option>
+            <option value="병원">병원</option>
+            <option value="공부">공부</option>
             <option value="경조사">경조사</option>
+            <option value="교통(주유)">교통(주유)</option>
+            <option value="공과금">공과금</option>
+            <option value="고정지출">고정지출</option>
             <option value="기타">기타</option>
           </select>
           <input type="text" inputmode="decimal" data-money id="expenseAmount" placeholder="금액" required />
@@ -690,16 +690,27 @@
   <script>
     const STORAGE_KEY = "salaryAppData_v1";
     const CATEGORY_COLORS = {
+      // Current categories.
+      "먹기": "#f97316",
+      "놀기": "#22c55e",
+      "사기": "#f472b6",
+      "병원": "#fb7185",
+      "공부": "#2dd4bf",
+      "경조사": "#60a5fa",
+      "교통(주유)": "#38bdf8",
+      "공과금": "#a78bfa",
+      "고정지출": "#facc15",
+      "기타": "#94a3b8",
+      // Names used by earlier entries. Those entries are left exactly as they
+      // were saved, so the old names still need a colour of their own.
       "식비": "#f97316",
       "교통": "#38bdf8",
       "주거/공과금": "#a78bfa",
-      "통신": "#facc15",
+      "통신": "#eab308",
       "쇼핑": "#f472b6",
       "문화/여가": "#22c55e",
       "의료/건강": "#fb7185",
       "교육": "#2dd4bf",
-      "경조사": "#60a5fa",
-      "기타": "#94a3b8",
     };
 
     function loadData() {
@@ -1019,6 +1030,8 @@
       document.getElementById("formTitle").textContent = editing ? "지출 수정" : "지출 추가";
       document.getElementById("submitBtn").textContent = editing ? "수정 저장" : "+ 지출 추가";
       document.getElementById("cancelEdit").hidden = !editing;
+      // The old-name option only exists while that entry is being edited.
+      if (!editing) dropLegacyOption();
     }
 
     // Default the date to today while viewing the current month, otherwise the
@@ -1119,12 +1132,32 @@
       render();
     });
 
+    // An entry saved under an earlier category name is not in the dropdown any
+    // more. Offering that name for as long as the entry is being edited keeps
+    // it from being silently re-filed under whichever option comes first.
+    function selectCategory(category) {
+      const select = document.getElementById("expenseCategory");
+      dropLegacyOption();
+      if (![...select.options].some((o) => o.value === category)) {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = category + " (이전 분류)";
+        option.dataset.legacy = "1";
+        select.appendChild(option);
+      }
+      select.value = category;
+    }
+
+    function dropLegacyOption() {
+      document.querySelectorAll("#expenseCategory option[data-legacy]").forEach((o) => o.remove());
+    }
+
     function startEditing(id) {
       const key = monthKey(currentDate);
       const entry = expensesOf(key).find((x) => x.id === id);
       if (!entry) return;
       editingId = id;
-      document.getElementById("expenseCategory").value = entry.category || "기타";
+      selectCategory(entry.category || "기타");
       Money.write(document.getElementById("expenseAmount"), entry.amount);
       document.getElementById("expenseDate").value = entry.date || `${key}-01`;
       document.getElementById("expenseMemo").value = entry.memo || "";
