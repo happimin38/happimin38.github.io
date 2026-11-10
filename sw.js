@@ -6,7 +6,7 @@
  * connection. Records live in localStorage, which the cache never touches,
  * so nothing entered can be lost by clearing it.
  */
-const CACHE = "money-note-v3";
+const CACHE = "money-note-v4";
 
 const ASSETS = [
   "./",
@@ -53,7 +53,13 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    fetch(request)
+    // "no-cache" makes the browser revalidate with the server instead of
+    // trusting its own HTTP cache. GitHub Pages marks pages max-age=600, so
+    // without it a deploy stays invisible for up to ten minutes — and the
+    // stale copy was then written into this cache as if it were current.
+    // Revalidation is a conditional request, so an unchanged file costs
+    // almost nothing.
+    fetch(request, { cache: "no-cache" })
       .then((response) => {
         if (response && response.ok) {
           const copy = response.clone();
