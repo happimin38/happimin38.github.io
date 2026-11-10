@@ -1,7 +1,7 @@
 {
-  "name": "머니 노트 · 월급 · 가계부 · 자산",
-  "short_name": "머니 노트",
-  "description": "월급과 지출을 기록하고 자산이 쌓이는 흐름을 확인하는 개인용 가계 도구",
+  "name": "가계부 · 월별 지출 기록",
+  "short_name": "가계부",
+  "description": "매달 지출을 카테고리별로 기록하고 달력으로 소비 습관을 확인하는 개인용 가계부",
   "lang": "ko",
   "start_url": "./index.html",
   "scope": "./",
