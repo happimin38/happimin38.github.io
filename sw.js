@@ -6,17 +6,13 @@
  * connection. Records live in localStorage, which the cache never touches,
  * so nothing entered can be lost by clearing it.
  */
-const CACHE = "money-note-v5";
+const CACHE = "site-v6";
 
 const ASSETS = [
   "./",
   "./index.html",
-  "./salary.html",
-  "./ledger.html",
-  "./dashboard.html",
   "./english.html",
   "./money-input.js",
-  "./asset-groups.js",
   "./manifest.json",
   "./manifest-english.json",
   "./icons/icon-192.png",
