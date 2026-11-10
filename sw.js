@@ -6,7 +6,7 @@
  * connection. Records live in localStorage, which the cache never touches,
  * so nothing entered can be lost by clearing it.
  */
-const CACHE = "site-v7";
+const CACHE = "site-v8";
 
 const ASSETS = [
   "./",
